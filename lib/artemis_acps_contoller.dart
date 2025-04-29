@@ -19,10 +19,11 @@ class ArtemisAcpsController {
   String baseUrl;
   String airport;
   String airline;
+  bool locked;
   BoardingPassCommand? bpConfig;
   BagTagCommand? btConfig;
 
-  ArtemisAcpsController({required this.baseUrl, required this.airport, required this.airline, this.bpConfig, this.btConfig});
+  ArtemisAcpsController({required this.baseUrl, required this.airport, required this.airline, this.bpConfig, this.btConfig,required this.locked});
 
   void reconfigure({required String newAirline, required String newAirport, required String newBaseUrl, BoardingPassCommand? newBpConfig, BagTagCommand? newBtConfig}) {
     baseUrl = newBaseUrl;
@@ -30,6 +31,7 @@ class ArtemisAcpsController {
     airline = newAirline;
     bpConfig = newBpConfig;
     btConfig = newBtConfig;
+    station.value = newAirport;
   }
 
   final ValueNotifier<ArtemisAcpsWorkstation?> workstation = ValueNotifier<ArtemisAcpsWorkstation?>(null);
@@ -37,6 +39,7 @@ class ArtemisAcpsController {
   final ValueNotifier<ArtemisAcpsKiosk?> kiosk = ValueNotifier<ArtemisAcpsKiosk?>(null);
   final ValueNotifier<ArtemisAcpsKioskStatus?> kioskStatus = ValueNotifier<ArtemisAcpsKioskStatus?>(null);
   final ValueNotifier<List<ArtemisKioskDevice>> devices = ValueNotifier<List<ArtemisKioskDevice>>([]);
+  late ValueNotifier<String> station = ValueNotifier<String>(airport);
 
   void dispose() {
     socketStatus.dispose();

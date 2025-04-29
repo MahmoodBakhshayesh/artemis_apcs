@@ -2,6 +2,7 @@ import 'package:artemis_acps/classes/artemis_acps_kiosk_class.dart';
 import 'package:artemis_acps/classes/artemis_acps_workstation_class.dart';
 import 'package:artemis_acps/classes/artemis_kiosk_device_class.dart';
 import 'package:artemis_acps/classes/artemis_kiosk_status_class.dart';
+import 'package:artemis_acps/widgets/configure_dialog.dart';
 import 'package:artemis_acps/widgets/general_buttom.dart';
 import 'package:artemis_acps/widgets/workstation_select_dialog.dart';
 import 'package:flutter/material.dart';
@@ -11,8 +12,8 @@ import 'artemis_acps_contoller.dart';
 class ArtemisAcps {
   late final ArtemisAcpsController _controller;
 
-  ArtemisAcps({required String baseUrl,required String  airport, required String  airline, ArtemisAcpsController? controller}) {
-    _controller = controller ?? ArtemisAcpsController(baseUrl: baseUrl, airport: airport, airline: airline);
+  ArtemisAcps({required String baseUrl,required String  airport, required String  airline, ArtemisAcpsController? controller, bool locked =false}) {
+    _controller = controller ?? ArtemisAcpsController(baseUrl: baseUrl, airport: airport, airline: airline,locked: locked);
   }
 
   Widget getSocketStatusWidget() {
@@ -145,54 +146,92 @@ class _GeneralWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<ArtemisAcpsWorkstation?>(
-      valueListenable: controller.workstation,
-      builder: (context, workstation, child) {
-        if (workstation == null) {
-          return GeneralButton(
-            height: size,
-            label: "Select Workstation",
-            radius: 8,
-            onPressed: () async {
-              final ws = await controller.getWorkstations();
-              final selected = await showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return WorkstationSelectDialog(workstations: ws);
+    return ValueListenableBuilder<String>(
+      valueListenable: controller.station,
+      builder: (context, station, child) {
+
+        return ValueListenableBuilder<ArtemisAcpsWorkstation?>(
+          valueListenable: controller.workstation,
+          builder: (context, workstation, child) {
+            if (workstation == null) {
+              return GeneralButton(
+                onLongPress: controller.locked?null:(){
+                  showDialog(context: context, builder: (BuildContext context) {
+                    return ConfigureDialog(controller: controller);
+                  });
                 },
+                height: size,
+                label: "Select Workstation (${station.toUpperCase()})",
+                radius: 8,
+                onPressed: () async {
+                  final ws = await controller.getWorkstations();
+                  final selected = await showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return WorkstationSelectDialog(workstations: ws);
+                    },
+                  );
+                  if (selected is ArtemisAcpsWorkstation) {
+                    controller.connectWorkstation(selected);
+                  }
+                },
+
               );
-              if (selected is ArtemisAcpsWorkstation) {
-                controller.connectWorkstation(selected);
-              }
-            },
-          );
-        }
-        return GestureDetector(
-          onLongPress: (){
-            controller.disconnectSocket();
-            controller.updateWorkstation(null);
-            controller.updateKiosk(null);
-          },
-          child: ValueListenableBuilder<HubConnectionState>(
-            valueListenable: controller.socketStatus,
-            builder: (context, socket, child) {
-              if (socket == HubConnectionState.Connected) {
-                return ValueListenableBuilder<ArtemisAcpsKioskStatus?>(
-                  valueListenable: controller.kioskStatus,
-                  builder: (context, kioskStatus, child) {
-                    if (kioskStatus != null && kioskStatus.isOnline) {
-                      return Container(
-                        height: size,
-                        padding: EdgeInsets.all(1),
-                        decoration: BoxDecoration(border: Border.all(color: Color(0xff00cf37)), borderRadius: BorderRadius.circular(8)),
-                        child: Stack(children: [_KioskDevicesWidget(controller: controller, filters: [], size: size - 2)]),
-                      );
-                    }
-                    return Container(
+            }
+            return GestureDetector(
+              onLongPress: (){
+                controller.disconnectSocket();
+                controller.updateWorkstation(null);
+                controller.updateKiosk(null);
+              },
+              child: ValueListenableBuilder<HubConnectionState>(
+                valueListenable: controller.socketStatus,
+                builder: (context, socket, child) {
+                  if (socket == HubConnectionState.Connected) {
+                    return ValueListenableBuilder<ArtemisAcpsKioskStatus?>(
+                      valueListenable: controller.kioskStatus,
+                      builder: (context, kioskStatus, child) {
+                        if (kioskStatus != null && kioskStatus.isOnline) {
+                          return Container(
+                            height: size,
+                            padding: EdgeInsets.all(1),
+                            decoration: BoxDecoration(border: Border.all(color: Color(0xff00cf37)), borderRadius: BorderRadius.circular(8)),
+                            child: Stack(children: [_KioskDevicesWidget(controller: controller, filters: [], size: size - 2)]),
+                          );
+                        }
+                        return Container(
+                          height: size,
+                          constraints: BoxConstraints(minWidth: 100),
+                          padding: EdgeInsets.all(1),
+                          decoration: BoxDecoration(border: Border.all(color: Colors.green), borderRadius: BorderRadius.circular(8)),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              SizedBox(height: size, child: Text(workstation.workstationName, style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black38))),
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Container(
+                                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(4), color: Colors.black12),
+                                  padding: EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                                  child: Text("Offline", style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, height: 1)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  }
+                  return GestureDetector(
+                    onTap: (){
+                      controller.reconnectSocket();
+                    },
+                    child: Container(
                       height: size,
                       constraints: BoxConstraints(minWidth: 100),
                       padding: EdgeInsets.all(1),
-                      decoration: BoxDecoration(border: Border.all(color: Colors.green), borderRadius: BorderRadius.circular(8)),
+                      decoration: BoxDecoration(border: Border.all(color: socket == HubConnectionState.Disconnected ? Colors.red : Colors.orange), borderRadius: BorderRadius.circular(8)),
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
@@ -203,46 +242,21 @@ class _GeneralWidget extends StatelessWidget {
                             child: Container(
                               decoration: BoxDecoration(borderRadius: BorderRadius.circular(4), color: Colors.black12),
                               padding: EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-                              child: Text("Offline", style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, height: 1)),
+                              child: Text(socket.name, style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, height: 1)),
                             ),
                           ),
                         ],
                       ),
-                    );
-                  },
-                );
-              }
-              return GestureDetector(
-                onTap: (){
-                  controller.reconnectSocket();
+                    ),
+                  );
                 },
-                child: Container(
-                  height: size,
-                  constraints: BoxConstraints(minWidth: 100),
-                  padding: EdgeInsets.all(1),
-                  decoration: BoxDecoration(border: Border.all(color: socket == HubConnectionState.Disconnected ? Colors.red : Colors.orange), borderRadius: BorderRadius.circular(8)),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      SizedBox(height: size, child: Text(workstation.workstationName, style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black38))),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          decoration: BoxDecoration(borderRadius: BorderRadius.circular(4), color: Colors.black12),
-                          padding: EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-                          child: Text(socket.name, style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, height: 1)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
+              ),
+            );
+            return SizedBox();
+          },
         );
-        return SizedBox();
       },
     );
+
   }
 }
