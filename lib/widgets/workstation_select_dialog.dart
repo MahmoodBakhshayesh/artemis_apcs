@@ -10,7 +10,6 @@ class WorkstationSelectDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    ThemeData theme = Theme.of(context);
     return CupertinoAlertDialog(
       content: Container(
         constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),

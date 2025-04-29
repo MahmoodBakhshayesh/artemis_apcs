@@ -1,33 +1,25 @@
+import 'dart:developer';
+
 import 'package:artemis_acps/artemis_acps.dart';
 import 'package:artemis_acps/classes/artemis_acps_bagtag_class.dart';
 import 'package:artemis_acps/classes/artemis_acps_boarding_pass_class.dart';
 import 'package:artemis_acps/classes/artemis_acps_workstation_class.dart';
-import 'package:artemis_acps/notifier.dart';
-import 'package:artemis_acps/providers/artemis_acps_status_provider.dart';
-import 'package:artemis_acps/status_managers.dart';
-import 'package:artemis_acps/widgets/device_list_status_widget.dart';
-import 'package:artemis_acps/widgets/kiosk_status_status_widget.dart';
-import 'package:artemis_acps/widgets/kiosk_status_widget.dart';
-import 'package:artemis_acps/widgets/socket_status_widget.dart';
+import 'package:artemis_acps/widgets/general_buttom.dart';
 import 'package:flutter/material.dart';
 
 void main() {
-  final manager = StatusManager(); // created ONCE
 
-  runApp(ArtemisAcpsStatusProvider(child: MyApp(manager)));
+  // runApp(ArtemisAcpsStatusProvider(child: MyApp()));
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  final StatusManager manager;
 
-  const MyApp(this.manager, {super.key});
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return StatusProvider(
-      manager: manager, // reusing existing manager
-      child: MaterialApp(home: MyHomePage()),
-    );
+    return MaterialApp(home: MyHomePage());
   }
 }
 
@@ -40,7 +32,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   List<ArtemisAcpsWorkstation> ws = [];
-  List<ArtemisAcps> acpsList = [ArtemisAcps(airport: 'zzz', baseUrl: 'https://testprintlayerapinew.abomis.com', airline: "zz"), ArtemisAcps(airport: 'zzz', baseUrl: 'https://testprintlayerapinew.abomis.com', airline: "zz")];
+  List<ArtemisAcps> acpsList = [ArtemisAcps(airport: 'zzz', baseUrl: 'http://192.168.45.72:45457', airline: "zz"), ArtemisAcps(airport: 'zzz', baseUrl: 'http://192.168.45.72:45457', airline: "zz")];
 
   @override
   Widget build(BuildContext context) {
@@ -58,14 +50,16 @@ class _MyHomePageState extends State<MyHomePage> {
                         // acps.getKioskStatusWidget(),
                         // acps.getKioskDevicesWidget(filter: [],size: 35),
                         acps.getGeneralWidget(),
-                        TextButton(
+                        GeneralButton(
                           onPressed: () async {
                               ArtemisAcpsBoardingPass bp = ArtemisAcpsBoardingPass(name: "Mahmood BKH", title: "MR", seq: "1", fromCity: "YVR", toCity: "IST", classType: "E", passengerType: "ADL", seat: "2A", airlineCode: "ZZ", flightNumber: "1010", flightDate: DateTime.now(), std: "18:10", gate: '1', fromCityName: '', toCityName: '', airlineName: 'ZZ', artemisAcpsBoardingPassClass: '', referenceNo: '', baggageCount: 1, baggageWeight: 2, barcodeData: 'dadsad', btd: '');
                               ArtemisAcpsBagtag bt = ArtemisAcpsBagtag(tagNumber: '1001001001', sixDigitNumber: '001001', name: 'Mahmood bkh', referenceNo: '1234', airlineThreeDigitCode: '001', baggageCount: 1, baggageWeight: 10, weightUnit: 'KG', firstAirportCode: 'ZZZ', firstAirportName: 'ZZZ', lastArilineCode: 'ZZ', lastAirlineName: 'ZZ', lastFlightNumber: '1010', lastFlightDate: '07OCT', lastAirportCode: 'ZZZ', lastAirportName: 'ZZZ', lastClassType: 'E', lastclass: 'E');
 
-                              acps.controller.printApi(bpList: [],btList: [bt]);
+                              // acps.controller.printApi(bpList: [bp],btList: [bt]);
+                              final res = await acps.controller.printData(bpList: [bp],btList: [bt]);
+                              log(res.isSuccessful.toString());
                           },
-                          child: Text("print data"),
+                          label: 'Print Data',
                         ),
                         TextButton(
                           onPressed: () async {

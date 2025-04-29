@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
-import 'package:artemis_acps/artemis_acps.dart';
 import 'package:artemis_acps/artemis_acps_contoller.dart';
 import 'package:signalr_netcore/ihub_protocol.dart';
 import 'package:signalr_netcore/signalr_client.dart';
@@ -24,10 +23,10 @@ class AcpsKioskUtil {
   ArtemisAcpsKioskConfig? _config;
 
   Map<String, ArtemisAcpsAeaCommand> inProgressAeaActions = {};
-  Map<String, Completer<ArtemisAcpsAeaResponse>> _pendingAeaResponses = {};
+  final Map<String, Completer<ArtemisAcpsAeaResponse>> _pendingAeaResponses = {};
 
   Map<String, ArtemisAcpsDirectCommand> inProgressDirectActions = {};
-  Map<String, Completer<ArtemisAcpsAeaResponse>> _pendingDirectResponses = {};
+  final Map<String, Completer<ArtemisAcpsAeaResponse>> _pendingDirectResponses = {};
   List<String> retriedTransactions = [];
 
   AcpsKioskUtil({required this.controller});
@@ -53,9 +52,6 @@ class AcpsKioskUtil {
     HubConnectionState s = status ?? HubConnectionState.Disconnected;
     controller.updateSocketStatus(s);
     return;
-    if (s == HubConnectionState.Disconnected) {
-      removeAcps();
-    }
   }
 
   Future<bool> connect(ArtemisAcpsKioskConfig config) async {
@@ -72,7 +68,7 @@ class AcpsKioskUtil {
       defaultHeaders.setHeaderValue("AirportToken", config.airportToken);
       await disconnect();
       String url = '${config.baseUrl}?DeviceID=${config.deviceId}&IsDcs=${config.isDcs}&AirportToken=${config.airportToken}';
-      print("URL $url");
+      log("URL $url");
       _hubConnection =
           HubConnectionBuilder()
               .withUrl(url, options: HttpConnectionOptions(skipNegotiation: true, transport: HttpTransportType.WebSockets, headers: defaultHeaders, accessTokenFactory: () async => jsonEncode(defaultHeaders.asMap)))
@@ -148,7 +144,7 @@ class AcpsKioskUtil {
       await _hubConnection.stop();
       refreshSocketStatus(_hubConnection.state);
     } catch (e) {
-      print(e);
+      log(e.toString());
     }
   }
 
@@ -212,20 +208,24 @@ class AcpsKioskUtil {
         }
       }
     } catch (e) {
-      print(e);
+      log(e.toString());
     }
   }
 
   Future<void> aeaDirectResponse(List<Object?>? arguments) async {
-    print("aeaDirectResponse\n$arguments");
+    log("aeaDirectResponse\n$arguments");
     try {
       if ((arguments ?? []).isNotEmpty) {
-        print(arguments!.first.runtimeType);
-        ArtemisAcpsAeaResponse response = ArtemisAcpsAeaResponse.fromJson(arguments.first as Map<String, dynamic>);
+        ArtemisAcpsAeaResponse response = ArtemisAcpsAeaResponse.fromJson(arguments!.first as Map<String, dynamic>);
         if (response.isSuccessful) {
-          inProgressAeaActions.removeWhere((a, b) => a == response.transactionId);
-          _pendingAeaResponses[response.transactionId]?.complete(response);
-          _pendingAeaResponses.remove(response.transactionId);
+          completeTransaction(response);
+          // inProgressAeaActions.removeWhere((a, b) => a == response.transactionId);
+          // _pendingAeaResponses[response.transactionId]?.complete(response);
+          // _pendingAeaResponses.remove(response.transactionId);
+          //
+          // inProgressDirectActions.removeWhere((a, b) => a == response.transactionId);
+          // _pendingDirectResponses[response.transactionId]?.complete(response);
+          // _pendingDirectResponses.remove(response.transactionId);
         }
         if (!response.isSuccessful && response.message != null) {
           if (!response.isSuccessful && response.message != "ERRTIMEOUT" && response.message?.toLowerCase() != "timeout") {
@@ -240,9 +240,14 @@ class AcpsKioskUtil {
                 bool initRes = await initDevices();
                 if (initRes) {
                   invokeAeaCommand(command, overrideTransactionID: response.transactionId);
-                  inProgressAeaActions.remove(response.transactionId);
-                  _pendingAeaResponses[response.transactionId]?.complete(response);
-                  _pendingAeaResponses.remove(response.transactionId);
+                  completeTransaction(response);
+                  // inProgressAeaActions.remove(response.transactionId);
+                  // _pendingAeaResponses[response.transactionId]?.complete(response);
+                  // _pendingAeaResponses.remove(response.transactionId);
+                  //
+                  // inProgressDirectActions.removeWhere((a, b) => a == response.transactionId);
+                  // _pendingDirectResponses[response.transactionId]?.complete(response);
+                  // _pendingDirectResponses.remove(response.transactionId);
                   return;
                 }
               }
@@ -252,14 +257,26 @@ class AcpsKioskUtil {
         }
       }
     } catch (e) {
-      print((e as Error).stackTrace);
+      log((e as Error).stackTrace.toString());
     }
+  }
+
+  completeTransaction(ArtemisAcpsAeaResponse response){
+    String transactionId= response.transactionId;
+
+    inProgressAeaActions.remove(transactionId);
+    _pendingAeaResponses[transactionId]?.complete(response);
+    _pendingAeaResponses.remove(transactionId);
+
+    inProgressDirectActions.removeWhere((a, b) => a == transactionId);
+    _pendingDirectResponses[transactionId]?.complete(response);
+    _pendingDirectResponses.remove(transactionId);
   }
 
   Future<ArtemisAcpsAeaResponse> invokeAeaCommand(ArtemisAcpsAeaCommand command, {String? overrideTransactionID}) async {
     command = command.copyWith(deviceId: devId!);
     String transactionID = overrideTransactionID ?? generateTransactionID();
-    print("invoking\n${command.toJson()} TrID:$transactionID ${command.bagTag == null ? "BP" : "BT"}");
+    log("invoking\n${command.toJson()} TrID:$transactionID ${command.bagTag == null ? "BP" : "BT"}");
     inProgressAeaActions.putIfAbsent(transactionID, () => command);
     final completer = Completer<ArtemisAcpsAeaResponse>();
     _pendingAeaResponses[transactionID] = completer;
@@ -276,14 +293,14 @@ class AcpsKioskUtil {
   Future<ArtemisAcpsAeaResponse> invokeDirectCommand(ArtemisAcpsDirectCommand command, {String? overrideTransactionID}) async {
     command = command.copyWith(deviceId: devId!);
     String transactionID = overrideTransactionID ?? generateTransactionID();
-    print("invoking\n TrID:$transactionID ${command.boardingPass.data.length} BPs ${command.bagTag.data.length} BTs");
+    log("invoking\n DevID:$devId TrID:$transactionID ${command.boardingPass.data.length} BPs ${command.bagTag.data.length} BTs");
     inProgressDirectActions.putIfAbsent(transactionID, () => command);
     final completer = Completer<ArtemisAcpsAeaResponse>();
     _pendingDirectResponses[transactionID] = completer;
 
-    _hubConnection.invoke("SendPrintAEA", args: [devId!, command]);
+    _hubConnection.invoke("SendPrintAEA", args: [devId!,transactionID, command]);
     return completer.future.timeout(
-      const Duration(seconds: 10),
+      const Duration(seconds: 100),
       onTimeout: () {
         throw TimeoutException("Operation timed out after 10 Seconds");
       },
@@ -297,7 +314,7 @@ class AcpsKioskUtil {
   }
 
   void aeaResponse(List<Object?>? arguments) {
-    print("aeaResponse\n$arguments");
+    log("aeaResponse\n$arguments");
   }
 
   String generateTransactionID() {

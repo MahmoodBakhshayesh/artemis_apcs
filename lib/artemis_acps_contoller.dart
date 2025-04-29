@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:artemis_acps/classes/artemis_acps_bagtag_class.dart';
 import 'package:artemis_acps/classes/artemis_acps_boarding_pass_class.dart';
@@ -71,7 +72,7 @@ class ArtemisAcpsController {
   Future<List<ArtemisAcpsWorkstation>> getWorkstations() async {
     List<ArtemisAcpsWorkstation> results = [];
     // if(baseUrl == null || airport == null) return [];
-    Dio dio = Dio(BaseOptions(baseUrl: baseUrl!, headers: {'content-type': 'application-json'}));
+    Dio dio = Dio(BaseOptions(baseUrl: baseUrl, headers: {'content-type': 'application-json'}));
     String api = "$baseUrl/api/ACPS/RetrieveWorkstation?Airport=$airport";
 
     final res = await dio.get(api);
@@ -105,7 +106,7 @@ class ArtemisAcpsController {
       }
       ArtemisAcpsWorkstation workstation = ArtemisAcpsWorkstation(deviceId: c.deviceId, workstationName: c.deviceName ?? 'QR-connected', computerName: c.deviceName ?? 'QR-connected', airportToken: c.airportToken, kioskId: null);
       updateWorkstation(workstation);
-      final w = workstation.toConfig();
+      // final w = workstation.toConfig();
       final connection = await kioskUtil.connect(c);
       if (connection) {
         await kioskUtil.subscribe();
@@ -193,7 +194,7 @@ class ArtemisAcpsController {
     return printAeaData(bpCommandList: hasBp ? [bp1, bp2, bp3] : [], btCommandList: hasBt ? [bt1, bt2] : []);
   }
 
-  Future<void> printApi({required List<ArtemisAcpsBoardingPass> bpList, required List<ArtemisAcpsBagtag> btList, ArtemisKioskDevice? bp, ArtemisKioskDevice? bt})async{
+  Future<bool> printApi({required List<ArtemisAcpsBoardingPass> bpList, required List<ArtemisAcpsBagtag> btList, ArtemisKioskDevice? bp, ArtemisKioskDevice? bt})async{
     try {
       if (workstation.value == null) {
         throw Exception("No Workstation!");
@@ -204,11 +205,13 @@ class ArtemisAcpsController {
         boardingPass: BoardingPassDirect(printerId: bp?.deviceName, data: bpList),
         bagTag: BagTagDirect(printerId: bt?.deviceName, data: btList),
       );
-      Dio dio = Dio(BaseOptions(baseUrl: baseUrl!, headers: {'content-type': 'application/json', 'api-key': workstation.value!.deviceId}));
+      Dio dio = Dio(BaseOptions(baseUrl: baseUrl, headers: {'content-type': 'application/json', 'api-key': workstation.value!.deviceId}));
       String api = "$baseUrl/api/ACPSPrint/PrintTravelDocument";
-      print(api);
-      print(jsonEncode(command.toJson()));
-      final res = dio.post(api, data: command.toJson());
+      log(api);
+      log(workstation.value!.deviceId);
+      // log(jsonEncode(command.toJson()));
+      final res = await dio.post(api, data: command.toJson());
+      return res.statusCode ==200;
     }catch(e){
       rethrow;
     }

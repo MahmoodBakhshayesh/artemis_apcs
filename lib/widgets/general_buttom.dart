@@ -94,7 +94,6 @@ class _GeneralButtonState extends State<GeneralButton> {
 
   @override
   Widget build(BuildContext context) {
-    ThemeData theme = Theme.of(context);
     bool disable = widget.disabled || widget.onPressed == null;
     Color c = widget.color ?? Colors.blueAccent;
     Color backgroundColor = (!widget.reverse) ? c : Colors.transparent;

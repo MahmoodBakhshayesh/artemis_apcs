@@ -46,7 +46,7 @@ class ArtemisAcps {
 class _SocketStatusWidget extends StatelessWidget {
   final ArtemisAcpsController controller;
 
-  const _SocketStatusWidget({super.key, required this.controller});
+  const _SocketStatusWidget({required this.controller});
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +73,7 @@ class _SocketStatusWidget extends StatelessWidget {
 class _KioskStatusWidget extends StatelessWidget {
   final ArtemisAcpsController controller;
 
-  const _KioskStatusWidget({super.key, required this.controller});
+  const _KioskStatusWidget({required this.controller});
 
   @override
   Widget build(BuildContext context) {
@@ -98,7 +98,7 @@ class _KioskStatusWidget extends StatelessWidget {
 class _KioskWidget extends StatelessWidget {
   final ArtemisAcpsController controller;
 
-  const _KioskWidget({super.key, required this.controller});
+  const _KioskWidget({required this.controller});
 
   @override
   Widget build(BuildContext context) {
@@ -119,7 +119,7 @@ class _KioskDevicesWidget extends StatelessWidget {
   final double size;
   final ArtemisAcpsController controller;
 
-  const _KioskDevicesWidget({super.key, required this.controller, required this.filters, required this.size});
+  const _KioskDevicesWidget({required this.controller, required this.filters, required this.size});
 
   @override
   Widget build(BuildContext context) {
@@ -142,7 +142,7 @@ class _GeneralWidget extends StatelessWidget {
   final double size;
   final ArtemisAcpsController controller;
 
-  const _GeneralWidget({super.key, required this.controller, required this.filters, required this.size});
+  const _GeneralWidget({required this.controller, required this.filters, required this.size});
 
   @override
   Widget build(BuildContext context) {
@@ -252,7 +252,6 @@ class _GeneralWidget extends StatelessWidget {
                 },
               ),
             );
-            return SizedBox();
           },
         );
       },
