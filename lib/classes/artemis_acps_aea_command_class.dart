@@ -368,8 +368,8 @@ class ArtemisAcpsReceivedData {
 class ArtemisAcpsDirectCommand {
   final String deviceId;
   final String airlineCode;
-  final BoardingPassDirect boardingPass;
-  final BagTagDirect bagTag;
+  final BoardingPassDirect? boardingPass;
+  final BagTagDirect? bagTag;
 
   ArtemisAcpsDirectCommand({
     required this.deviceId,
@@ -401,8 +401,8 @@ class ArtemisAcpsDirectCommand {
   Map<String, dynamic> toJson() => {
     "DeviceID": deviceId,
     "AirlineCode": airlineCode,
-    "BoardingPass": boardingPass.toJson(),
-    "BagTag": bagTag.toJson(),
+    "BoardingPass": boardingPass?.toJson(),
+    "BagTag": bagTag?.toJson(),
   };
 }
 

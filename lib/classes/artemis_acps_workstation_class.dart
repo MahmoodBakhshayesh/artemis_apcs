@@ -50,5 +50,5 @@ class ArtemisAcpsWorkstation {
     "AirportToken": airportToken,
   };
 
-  ArtemisAcpsKioskConfig toConfig() => ArtemisAcpsKioskConfig(deviceId: deviceId, isDcs: '3', airportToken: airportToken, baseUrl: '', deviceName: workstationName);
+  ArtemisAcpsKioskConfig toConfig() => ArtemisAcpsKioskConfig(deviceId: deviceId, isDcs: '3', airportToken: airportToken, baseUrl: '', kioskId: kioskId);
 }

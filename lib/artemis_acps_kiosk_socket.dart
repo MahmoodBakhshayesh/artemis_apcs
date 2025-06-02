@@ -29,6 +29,26 @@ class AcpsKioskUtil {
   final Map<String, Completer<ArtemisAcpsAeaResponse>> _pendingDirectResponses = {};
   List<String> retriedTransactions = [];
 
+
+  List<String> get bpCommandKeysDirect => inProgressDirectActions.entries
+      .where((entry) => entry.value.bagTag==null)
+      .map((entry) => entry.key)
+      .toList();
+  List<String> get bpCommandKeysAea => inProgressAeaActions.entries
+      .where((entry) => entry.value.bagTag==null)
+      .map((entry) => entry.key)
+      .toList();
+
+  List<String> get btCommandKeysDirect => inProgressDirectActions.entries
+      .where((entry) => entry.value.boardingPass==null)
+      .map((entry) => entry.key)
+      .toList();
+
+  List<String> get btCommandKeysAea => inProgressAeaActions.entries
+      .where((entry) => entry.value.boardingPass==null)
+      .map((entry) => entry.key)
+      .toList();
+
   AcpsKioskUtil({required this.controller});
 
   void kioskRefresh(ArtemisAcpsKiosk? kiosk) {
@@ -182,6 +202,7 @@ class AcpsKioskUtil {
       if ((arguments ?? []).isNotEmpty) {
         ArtemisAcpsReceivedData receivedData = ArtemisAcpsReceivedData.fromJson(arguments!.first as Map<String, dynamic>);
         updateReceivedData(receivedData);
+        controller.onReceivedData?.call(receivedData);
         if (receivedData.deviceType == "BG") {
           ArtemisAcpsAeaCommand req = ArtemisAcpsAeaCommand(
             deviceId: devId!,
@@ -293,7 +314,7 @@ class AcpsKioskUtil {
   Future<ArtemisAcpsAeaResponse> invokeDirectCommand(ArtemisAcpsDirectCommand command, {String? overrideTransactionID}) async {
     command = command.copyWith(deviceId: devId!);
     String transactionID = overrideTransactionID ?? generateTransactionID();
-    log("invoking\n DevID:$devId TrID:$transactionID ${command.boardingPass.data.length} BPs ${command.bagTag.data.length} BTs");
+    log("invoking\n DevID:$devId TrID:$transactionID ${command.boardingPass?.data.length} BPs ${command.bagTag?.data.length} BTs");
     inProgressDirectActions.putIfAbsent(transactionID, () => command);
     final completer = Completer<ArtemisAcpsAeaResponse>();
     _pendingDirectResponses[transactionID] = completer;

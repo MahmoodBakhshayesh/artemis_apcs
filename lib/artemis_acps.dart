@@ -2,6 +2,7 @@ import 'package:artemis_acps/classes/artemis_acps_kiosk_class.dart';
 import 'package:artemis_acps/classes/artemis_acps_workstation_class.dart';
 import 'package:artemis_acps/classes/artemis_kiosk_device_class.dart';
 import 'package:artemis_acps/classes/artemis_kiosk_status_class.dart';
+import 'package:artemis_acps/classes/general_button_style_class.dart';
 import 'package:artemis_acps/widgets/configure_dialog.dart';
 import 'package:artemis_acps/widgets/general_buttom.dart';
 import 'package:artemis_acps/widgets/workstation_select_dialog.dart';
@@ -11,9 +12,10 @@ import 'artemis_acps_contoller.dart';
 
 class ArtemisAcps {
   late final ArtemisAcpsController _controller;
+  final GeneralButtonStyle? buttonStyle;
 
-  ArtemisAcps({required String baseUrl,required String  airport, required String  airline, ArtemisAcpsController? controller, bool locked =false}) {
-    _controller = controller ?? ArtemisAcpsController(baseUrl: baseUrl, airport: airport, airline: airline,locked: locked);
+  ArtemisAcps({required String baseUrl, required String airport, required String airline, ArtemisAcpsController? controller, bool locked = false, this.buttonStyle}) {
+    _controller = controller ?? ArtemisAcpsController(baseUrl: baseUrl, airport: airport, airline: airline, locked: locked);
   }
 
   Widget getSocketStatusWidget() {
@@ -32,8 +34,24 @@ class ArtemisAcps {
     return _KioskDevicesWidget(controller: _controller, filters: filter, size: size ?? 30);
   }
 
-  Widget getGeneralWidget({List<String> filter = const [], double? size}) {
-    return _GeneralWidget(controller: _controller, filters: filter, size: size ?? 30);
+  Widget getGeneralWidget({
+    List<String> filter = const [],
+    double? size,
+    Widget Function(ArtemisAcpsController controller, ArtemisAcpsWorkstation? worksation)? workstationWidgetBuilder,
+    Widget Function(ArtemisAcpsController controller, ArtemisAcpsWorkstation? worksation, HubConnectionState socketState)? socketWidgetBuilder,
+    Widget Function(ArtemisAcpsController controller, ArtemisAcpsWorkstation? worksation, HubConnectionState socketState, ArtemisAcpsKioskStatus? kioskStatus)? kioskWidgetBuilder,
+    Widget Function(ArtemisAcpsController controller, ArtemisAcpsWorkstation? worksation, HubConnectionState socketState, ArtemisAcpsKioskStatus? kioskStatus, List<ArtemisKioskDevice> devices)? generalWidgetBuilder,
+  }) {
+    return _GeneralWidget(
+      controller: _controller,
+      filters: filter,
+      size: size ?? 30,
+      generalButtonStyle: buttonStyle,
+      workstationWidgetBuilder: workstationWidgetBuilder,
+      socketWidgetBuilder: socketWidgetBuilder,
+      kioskWidgetBuilder: kioskWidgetBuilder,
+      generalWidgetBuilder: generalWidgetBuilder,
+    );
   }
 
   void reconfigure({required String newAirline, required String newAirport, required String newBaseUrl}) {
@@ -141,28 +159,47 @@ class _GeneralWidget extends StatelessWidget {
   final List<String> filters;
   final double size;
   final ArtemisAcpsController controller;
+  final GeneralButtonStyle? generalButtonStyle;
+  final Widget Function(ArtemisAcpsController controller, ArtemisAcpsWorkstation? worksation)? workstationWidgetBuilder;
+  final Widget Function(ArtemisAcpsController controller, ArtemisAcpsWorkstation? worksation, HubConnectionState socketState)? socketWidgetBuilder;
+  final Widget Function(ArtemisAcpsController controller, ArtemisAcpsWorkstation? worksation, HubConnectionState socketState, ArtemisAcpsKioskStatus? kioskStatus)? kioskWidgetBuilder;
+  final Widget Function(ArtemisAcpsController controller, ArtemisAcpsWorkstation? worksation, HubConnectionState socketState, ArtemisAcpsKioskStatus? kioskStatus, List<ArtemisKioskDevice> devices)? generalWidgetBuilder;
 
-  const _GeneralWidget({required this.controller, required this.filters, required this.size});
+  const _GeneralWidget({required this.controller, required this.filters, required this.size, this.generalButtonStyle, this.workstationWidgetBuilder, this.socketWidgetBuilder, this.kioskWidgetBuilder, this.generalWidgetBuilder});
 
   @override
   Widget build(BuildContext context) {
+    var buttonStyle = generalButtonStyle ?? GeneralButtonStyle(borderRadius: BorderRadius.circular(8), foregroundColor: Colors.white, backgroundColor: Colors.blueAccent);
     return ValueListenableBuilder<String>(
       valueListenable: controller.station,
       builder: (context, station, child) {
-
         return ValueListenableBuilder<ArtemisAcpsWorkstation?>(
           valueListenable: controller.workstation,
           builder: (context, workstation, child) {
             if (workstation == null) {
+              if (workstationWidgetBuilder != null) {
+                return workstationWidgetBuilder!(controller, workstation);
+              }
               return GeneralButton(
-                onLongPress: controller.locked?null:(){
-                  showDialog(context: context, builder: (BuildContext context) {
-                    return ConfigureDialog(controller: controller);
-                  });
-                },
-                height: size,
+                onLongPress:
+                    controller.locked
+                        ? null
+                        : () {
+                          showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return ConfigureDialog(controller: controller);
+                            },
+                          );
+                        },
+                height: buttonStyle.height ?? size,
                 label: "Select Workstation (${station.toUpperCase()})",
-                radius: 8,
+                borderRadius: buttonStyle.borderRadius,
+                color: buttonStyle.backgroundColor,
+                textColor: buttonStyle.foregroundColor,
+                icon: buttonStyle.icon,
+                fontSize: buttonStyle.fontSize,
+                fontWeight: buttonStyle.fontWeight,
                 onPressed: () async {
                   final ws = await controller.getWorkstations();
                   final selected = await showDialog(
@@ -175,11 +212,10 @@ class _GeneralWidget extends StatelessWidget {
                     controller.connectWorkstation(selected);
                   }
                 },
-
               );
             }
             return GestureDetector(
-              onLongPress: (){
+              onLongPress: () {
                 controller.disconnectSocket();
                 controller.updateWorkstation(null);
                 controller.updateKiosk(null);
@@ -192,12 +228,18 @@ class _GeneralWidget extends StatelessWidget {
                       valueListenable: controller.kioskStatus,
                       builder: (context, kioskStatus, child) {
                         if (kioskStatus != null && kioskStatus.isOnline) {
+                          if (generalWidgetBuilder != null) {
+                            return generalWidgetBuilder!(controller, workstation, socket, kioskStatus, controller.devices.value);
+                          }
                           return Container(
                             height: size,
                             padding: EdgeInsets.all(1),
                             decoration: BoxDecoration(border: Border.all(color: Color(0xff00cf37)), borderRadius: BorderRadius.circular(8)),
-                            child: Stack(children: [_KioskDevicesWidget(controller: controller, filters: [], size: size - 2)]),
+                            child: Stack(children: [_KioskDevicesWidget(controller: controller, filters: filters, size: size - 2)]),
                           );
+                        }
+                        if (kioskWidgetBuilder != null) {
+                          return kioskWidgetBuilder!(controller, workstation, socket, kioskStatus);
                         }
                         return Container(
                           height: size,
@@ -223,8 +265,11 @@ class _GeneralWidget extends StatelessWidget {
                       },
                     );
                   }
+                  if (socketWidgetBuilder != null) {
+                    return socketWidgetBuilder!(controller, workstation, socket);
+                  }
                   return GestureDetector(
-                    onTap: (){
+                    onTap: () {
                       controller.reconnectSocket();
                     },
                     child: Container(
@@ -256,6 +301,5 @@ class _GeneralWidget extends StatelessWidget {
         );
       },
     );
-
   }
 }

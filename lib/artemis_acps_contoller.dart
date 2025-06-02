@@ -23,6 +23,7 @@ class ArtemisAcpsController {
   bool locked;
   BoardingPassCommand? bpConfig;
   BagTagCommand? btConfig;
+  void Function(ArtemisAcpsReceivedData receivedData)? onReceivedData;
 
   ArtemisAcpsController({required this.baseUrl, required this.airport, required this.airline, this.bpConfig, this.btConfig,required this.locked});
 
@@ -41,6 +42,10 @@ class ArtemisAcpsController {
   final ValueNotifier<ArtemisAcpsKioskStatus?> kioskStatus = ValueNotifier<ArtemisAcpsKioskStatus?>(null);
   final ValueNotifier<List<ArtemisKioskDevice>> devices = ValueNotifier<List<ArtemisKioskDevice>>([]);
   late ValueNotifier<String> station = ValueNotifier<String>(airport);
+  late ValueNotifier<List<String>> printingBpsAea = ValueNotifier<List<String>>(kioskUtil.bpCommandKeysAea);
+  late ValueNotifier<List<String>> printingBpsDirect = ValueNotifier<List<String>>(kioskUtil.bpCommandKeysDirect);
+  late ValueNotifier<List<String>> printingBtsAea = ValueNotifier<List<String>>(kioskUtil.btCommandKeysAea);
+  late ValueNotifier<List<String>> printingBtsDirect = ValueNotifier<List<String>>(kioskUtil.btCommandKeysDirect);
 
   void dispose() {
     socketStatus.dispose();
@@ -51,6 +56,10 @@ class ArtemisAcpsController {
 
   void updateSocketStatus(HubConnectionState state) {
     socketStatus.value = state;
+  }
+
+  void setDataListener(void Function(ArtemisAcpsReceivedData receivedData)? listener) {
+    onReceivedData = listener;
   }
 
   void updateKiosk(ArtemisAcpsKiosk? k) {
@@ -101,9 +110,7 @@ class ArtemisAcpsController {
   Future<void> connectWorkstationWithQr(String qr) async {
     if (isGeneralPrinterQrKiosk(qr)) {
       var c = ArtemisAcpsKioskConfig.fromBarcode(qr);
-      if ((c.deviceName ?? '').isEmpty) {
-        c = c.copyWith(deviceName: "QR-Kiosk");
-      }
+
       ArtemisAcpsWorkstation workstation = ArtemisAcpsWorkstation(deviceId: c.deviceId, workstationName: c.deviceName ?? 'QR-connected', computerName: c.deviceName ?? 'QR-connected', airportToken: c.airportToken, kioskId: null);
       updateWorkstation(workstation);
       // final w = workstation.toConfig();
@@ -226,4 +233,6 @@ class ArtemisAcpsController {
   }
 
   bool isGeneralPrinterQrKiosk(String barcode) => barcode.toLowerCase().startsWith("bdcsprinterqr|kiosk|") && barcode.split("|").length >= 6;
+
+
 }
