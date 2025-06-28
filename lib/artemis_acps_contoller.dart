@@ -14,6 +14,8 @@ import 'package:signalr_netcore/hub_connection.dart';
 import 'artemis_acps_kiosk_socket.dart';
 import 'classes/artemis_acps_aea_command_class.dart';
 import 'classes/artemis_acps_workstation_class.dart';
+import 'widgets/configure_dialog.dart';
+import 'widgets/workstation_select_dialog.dart';
 
 class ArtemisAcpsController {
   late AcpsKioskUtil kioskUtil = AcpsKioskUtil(controller: this);
@@ -25,7 +27,7 @@ class ArtemisAcpsController {
   BagTagCommand? btConfig;
   void Function(ArtemisAcpsReceivedData receivedData)? onReceivedData;
 
-  ArtemisAcpsController({required this.baseUrl, required this.airport, required this.airline, this.bpConfig, this.btConfig,required this.locked});
+  ArtemisAcpsController({required this.baseUrl, required this.airport, required this.airline, this.bpConfig, this.btConfig, required this.locked});
 
   void reconfigure({required String newAirline, required String newAirport, required String newBaseUrl, BoardingPassCommand? newBpConfig, BagTagCommand? newBtConfig}) {
     baseUrl = newBaseUrl;
@@ -201,7 +203,7 @@ class ArtemisAcpsController {
     return printAeaData(bpCommandList: hasBp ? [bp1, bp2, bp3] : [], btCommandList: hasBt ? [bt1, bt2] : []);
   }
 
-  Future<bool> printApi({required List<ArtemisAcpsBoardingPass> bpList, required List<ArtemisAcpsBagtag> btList, ArtemisKioskDevice? bp, ArtemisKioskDevice? bt})async{
+  Future<bool> printApi({required List<ArtemisAcpsBoardingPass> bpList, required List<ArtemisAcpsBagtag> btList, ArtemisKioskDevice? bp, ArtemisKioskDevice? bt}) async {
     try {
       if (workstation.value == null) {
         throw Exception("No Workstation!");
@@ -218,8 +220,8 @@ class ArtemisAcpsController {
       log(workstation.value!.deviceId);
       // log(jsonEncode(command.toJson()));
       final res = await dio.post(api, data: command.toJson());
-      return res.statusCode ==200;
-    }catch(e){
+      return res.statusCode == 200;
+    } catch (e) {
       rethrow;
     }
   }
@@ -234,5 +236,31 @@ class ArtemisAcpsController {
 
   bool isGeneralPrinterQrKiosk(String barcode) => barcode.toLowerCase().startsWith("bdcsprinterqr|kiosk|") && barcode.split("|").length >= 6;
 
+  Future<void> selectWorkstation(BuildContext context) async {
+    final ws = await getWorkstations();
+    final selected = await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return WorkstationSelectDialog(workstations: ws);
+      },
+    );
+    if (selected is ArtemisAcpsWorkstation) {
+      connectWorkstation(selected);
+    }
+  }
 
+  Future<void> configureAcps(BuildContext context) async {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return ConfigureDialog(controller: this);
+      },
+    );
+  }
+
+  void disconnect() {
+    disconnectSocket();
+    updateWorkstation(null);
+    updateKiosk(null);
+  }
 }

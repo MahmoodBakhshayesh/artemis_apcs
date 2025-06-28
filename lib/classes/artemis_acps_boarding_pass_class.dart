@@ -33,7 +33,7 @@ class ArtemisAcpsBoardingPass {
   final String? airlineCode;
   final String? airlineName;
   final String? flightNumber;
-  final DateTime? flightDate;
+  final String? flightDate;
   final String? std;
   final String? sta;
   final String? btd;
@@ -143,7 +143,7 @@ class ArtemisAcpsBoardingPass {
       airlineCode: json['AirlineCode'],
       airlineName: json['AirlineName'],
       flightNumber: json['FlightNumber'],
-      flightDate: json['FlightDate'] != null ? DateTime.tryParse(json['FlightDate']) : null,
+      flightDate: json['FlightDate'] ,
       std: json['STD'],
       sta: json['STA'],
       btd: json['BTD'],
@@ -200,7 +200,7 @@ class ArtemisAcpsBoardingPass {
       'AirlineCode': airlineCode,
       'AirlineName': airlineName,
       'FlightNumber': flightNumber,
-      'FlightDate': flightDate?.toIso8601String(),
+      'FlightDate': flightDate,
       'STD': std,
       'STA': sta,
       'BTD': btd,
@@ -256,7 +256,7 @@ class ArtemisAcpsBoardingPass {
     String? airlineCode,
     String? airlineName,
     String? flightNumber,
-    DateTime? flightDate,
+    String? flightDate,
     String? std,
     String? sta,
     String? btd,

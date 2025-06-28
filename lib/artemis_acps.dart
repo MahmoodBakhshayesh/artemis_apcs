@@ -30,12 +30,13 @@ class ArtemisAcps {
     return _KioskWidget(controller: _controller);
   }
 
-  Widget getKioskDevicesWidget({List<String> filter = const [], double? size}) {
-    return _KioskDevicesWidget(controller: _controller, filters: filter, size: size ?? 30);
+  Widget getKioskDevicesWidget({List<String> filter = const [], List<String> statusFilters = const [], double? size}) {
+    return _KioskDevicesWidget(controller: _controller, filters: filter,statusFilters:statusFilters, size: size ?? 30);
   }
 
   Widget getGeneralWidget({
     List<String> filter = const [],
+    List<String> statusFilters = const [],
     double? size,
     Widget Function(ArtemisAcpsController controller, ArtemisAcpsWorkstation? worksation)? workstationWidgetBuilder,
     Widget Function(ArtemisAcpsController controller, ArtemisAcpsWorkstation? worksation, HubConnectionState socketState)? socketWidgetBuilder,
@@ -45,6 +46,7 @@ class ArtemisAcps {
     return _GeneralWidget(
       controller: _controller,
       filters: filter,
+      statusFilters: statusFilters,
       size: size ?? 30,
       generalButtonStyle: buttonStyle,
       workstationWidgetBuilder: workstationWidgetBuilder,
@@ -134,10 +136,11 @@ class _KioskWidget extends StatelessWidget {
 
 class _KioskDevicesWidget extends StatelessWidget {
   final List<String> filters;
+  final List<String> statusFilters;
   final double size;
   final ArtemisAcpsController controller;
 
-  const _KioskDevicesWidget({required this.controller, required this.filters, required this.size});
+  const _KioskDevicesWidget({required this.controller, required this.filters, required this.statusFilters, required this.size});
 
   @override
   Widget build(BuildContext context) {
@@ -148,7 +151,7 @@ class _KioskDevicesWidget extends StatelessWidget {
         return Row(
           spacing: 1,
           mainAxisSize: MainAxisSize.min,
-          children: value.where((a) => filters.isEmpty || filters.map((f) => f.toLowerCase()).contains(a.getType.toLowerCase())).map((a) => Image.asset(a.img, width: size, package: 'artemis_acps')).toList(),
+          children: value.where((b)=>statusFilters.isEmpty || statusFilters.contains(b.status)).where((a) => filters.isEmpty || filters.map((f) => f.toLowerCase()).contains(a.getType.toLowerCase())).map((a) => Image.asset(a.img, width: size, package: 'artemis_acps')).toList(),
         );
       },
     );
@@ -157,6 +160,7 @@ class _KioskDevicesWidget extends StatelessWidget {
 
 class _GeneralWidget extends StatelessWidget {
   final List<String> filters;
+  final List<String> statusFilters;
   final double size;
   final ArtemisAcpsController controller;
   final GeneralButtonStyle? generalButtonStyle;
@@ -165,7 +169,7 @@ class _GeneralWidget extends StatelessWidget {
   final Widget Function(ArtemisAcpsController controller, ArtemisAcpsWorkstation? worksation, HubConnectionState socketState, ArtemisAcpsKioskStatus? kioskStatus)? kioskWidgetBuilder;
   final Widget Function(ArtemisAcpsController controller, ArtemisAcpsWorkstation? worksation, HubConnectionState socketState, ArtemisAcpsKioskStatus? kioskStatus, List<ArtemisKioskDevice> devices)? generalWidgetBuilder;
 
-  const _GeneralWidget({required this.controller, required this.filters, required this.size, this.generalButtonStyle, this.workstationWidgetBuilder, this.socketWidgetBuilder, this.kioskWidgetBuilder, this.generalWidgetBuilder});
+  const _GeneralWidget({required this.controller, required this.filters,required this.statusFilters, required this.size, this.generalButtonStyle, this.workstationWidgetBuilder, this.socketWidgetBuilder, this.kioskWidgetBuilder, this.generalWidgetBuilder});
 
   @override
   Widget build(BuildContext context) {
@@ -185,12 +189,7 @@ class _GeneralWidget extends StatelessWidget {
                     controller.locked
                         ? null
                         : () {
-                          showDialog(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return ConfigureDialog(controller: controller);
-                            },
-                          );
+                          controller.configureAcps(context);
                         },
                 height: buttonStyle.height ?? size,
                 label: "Select Workstation (${station.toUpperCase()})",
@@ -201,24 +200,22 @@ class _GeneralWidget extends StatelessWidget {
                 fontSize: buttonStyle.fontSize,
                 fontWeight: buttonStyle.fontWeight,
                 onPressed: () async {
-                  final ws = await controller.getWorkstations();
-                  final selected = await showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return WorkstationSelectDialog(workstations: ws);
-                    },
-                  );
-                  if (selected is ArtemisAcpsWorkstation) {
-                    controller.connectWorkstation(selected);
-                  }
+                  await controller.selectWorkstation(context);
+                  // final selected = await showDialog(
+                  //   context: context,
+                  //   builder: (BuildContext context) {
+                  //     return WorkstationSelectDialog(workstations: ws);
+                  //   },
+                  // );
+                  // if (selected is ArtemisAcpsWorkstation) {
+                  //   controller.connectWorkstation(selected);
+                  // }
                 },
               );
             }
             return GestureDetector(
               onLongPress: () {
-                controller.disconnectSocket();
-                controller.updateWorkstation(null);
-                controller.updateKiosk(null);
+                controller.disconnect();
               },
               child: ValueListenableBuilder<HubConnectionState>(
                 valueListenable: controller.socketStatus,
@@ -235,7 +232,7 @@ class _GeneralWidget extends StatelessWidget {
                             height: size,
                             padding: EdgeInsets.all(1),
                             decoration: BoxDecoration(border: Border.all(color: Color(0xff00cf37)), borderRadius: BorderRadius.circular(8)),
-                            child: Stack(children: [_KioskDevicesWidget(controller: controller, filters: filters, size: size - 2)]),
+                            child: Stack(children: [_KioskDevicesWidget(controller: controller, filters: filters, statusFilters:statusFilters,size: size - 2)]),
                           );
                         }
                         if (kioskWidgetBuilder != null) {

@@ -16,7 +16,7 @@ class ArtemisAcpsBagtag {
   final String? lastAirlineCode;
   final String? lastAirlineName;
   final String? lastFlightNumber;
-  final DateTime? lastFlightDate;
+  final String? lastFlightDate;
   final String? lastAirportCode;
   final String? lastAirportName;
   final String? lastClassType;
@@ -25,7 +25,7 @@ class ArtemisAcpsBagtag {
   final String? via1AirlineCode;
   final String? via1AirlineName;
   final String? via1FlightNumber;
-  final DateTime? via1FlightDate;
+  final String? via1FlightDate;
   final String? via1AirportCode;
   final String? via1AirportName;
   final String? via1ClassType;
@@ -34,7 +34,7 @@ class ArtemisAcpsBagtag {
   final String? via2AirlineCode;
   final String? via2AirlineName;
   final String? via2FlightNumber;
-  final DateTime? via2FlightDate;
+  final String? via2FlightDate;
   final String? via2AirportCode;
   final String? via2AirportName;
   final String? via2ClassType;
@@ -132,7 +132,7 @@ class ArtemisAcpsBagtag {
       lastAirlineCode: json['LastArilineCode'],
       lastAirlineName: json['LastAirlineName'],
       lastFlightNumber: json['LastFlightNumber'],
-      lastFlightDate: json['LastFlightDate'] != null ? DateTime.tryParse(json['LastFlightDate']) : null,
+      lastFlightDate: json['LastFlightDate'],
       lastAirportCode: json['LastAirportCode'],
       lastAirportName: json['LastAirportName'],
       lastClassType: json['LastClassType'],
@@ -141,7 +141,7 @@ class ArtemisAcpsBagtag {
       via1AirlineCode: json['Via1ArilineCode'],
       via1AirlineName: json['Via1AirlineName'],
       via1FlightNumber: json['Via1FlightNumber'],
-      via1FlightDate: json['Via1FlightDate'] != null ? DateTime.tryParse(json['Via1FlightDate']) : null,
+      via1FlightDate: json['Via1FlightDate'] ,
       via1AirportCode: json['Via1AirportCode'],
       via1AirportName: json['Via1AirportName'],
       via1ClassType: json['Via1ClassType'],
@@ -150,7 +150,7 @@ class ArtemisAcpsBagtag {
       via2AirlineCode: json['Via2ArilineCode'],
       via2AirlineName: json['Via2AirlineName'],
       via2FlightNumber: json['Via2FlightNumber'],
-      via2FlightDate: json['Via2FlightDate'] != null ? DateTime.tryParse(json['Via2FlightDate']) : null,
+      via2FlightDate: json['Via2FlightDate'],
       via2AirportCode: json['Via2AirportCode'],
       via2AirportName: json['Via2AirportName'],
       via2ClassType: json['Via2ClassType'],
@@ -192,7 +192,7 @@ class ArtemisAcpsBagtag {
       'LastArilineCode': lastAirlineCode,
       'LastAirlineName': lastAirlineName,
       'LastFlightNumber': lastFlightNumber,
-      'LastFlightDate': lastFlightDate?.toIso8601String(),
+      'LastFlightDate': lastFlightDate,
       'LastAirportCode': lastAirportCode,
       'LastAirportName': lastAirportName,
       'LastClassType': lastClassType,
@@ -201,7 +201,7 @@ class ArtemisAcpsBagtag {
       'Via1ArilineCode': via1AirlineCode,
       'Via1AirlineName': via1AirlineName,
       'Via1FlightNumber': via1FlightNumber,
-      'Via1FlightDate': via1FlightDate?.toIso8601String(),
+      'Via1FlightDate': via1FlightDate,
       'Via1AirportCode': via1AirportCode,
       'Via1AirportName': via1AirportName,
       'Via1ClassType': via1ClassType,
@@ -210,7 +210,7 @@ class ArtemisAcpsBagtag {
       'Via2ArilineCode': via2AirlineCode,
       'Via2AirlineName': via2AirlineName,
       'Via2FlightNumber': via2FlightNumber,
-      'Via2FlightDate': via2FlightDate?.toIso8601String(),
+      'Via2FlightDate': via2FlightDate,
       'Via2AirportCode': via2AirportCode,
       'Via2AirportName': via2AirportName,
       'Via2ClassType': via2ClassType,
@@ -251,7 +251,7 @@ class ArtemisAcpsBagtag {
     String? lastArilineCode,
     String? lastAirlineName,
     String? lastFlightNumber,
-    DateTime? lastFlightDate,
+    String? lastFlightDate,
     String? lastAirportCode,
     String? lastAirportName,
     String? lastClassType,
@@ -260,7 +260,7 @@ class ArtemisAcpsBagtag {
     String? via1ArilineCode,
     String? via1AirlineName,
     String? via1FlightNumber,
-    DateTime? via1FlightDate,
+    String? via1FlightDate,
     String? via1AirportCode,
     String? via1AirportName,
     String? via1ClassType,
@@ -269,7 +269,7 @@ class ArtemisAcpsBagtag {
     String? via2ArilineCode,
     String? via2AirlineName,
     String? via2FlightNumber,
-    DateTime? via2FlightDate,
+    String? via2FlightDate,
     String? via2AirportCode,
     String? via2AirportName,
     String? via2ClassType,
