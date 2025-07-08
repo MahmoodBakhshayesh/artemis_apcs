@@ -226,6 +226,29 @@ class ArtemisAcpsController {
     }
   }
 
+  Future<bool> printApiJson({required List<Map<String,dynamic>> bpJsonList, required List<Map<String,dynamic>> btJsonList, ArtemisKioskDevice? bp, ArtemisKioskDevice? bt}) async {
+    try {
+      if (workstation.value == null) {
+        throw Exception("No Workstation!");
+      }
+      final commandJson = {
+        "DeviceID": workstation.value!.deviceId,
+        "AirlineCode": airline,
+        "BoardingPass": bpJsonList,
+        "BagTag": btJsonList,
+      };
+      Dio dio = Dio(BaseOptions(baseUrl: baseUrl, headers: {'content-type': 'application/json', 'api-key': workstation.value!.deviceId}));
+      String api = "$baseUrl/api/ACPSPrint/PrintTravelDocument";
+      log(api);
+      log(workstation.value!.deviceId);
+      // log(jsonEncode(command.toJson()));
+      final res = await dio.post(api, data: commandJson);
+      return res.statusCode == 200;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<void> disconnectSocket() async {
     await kioskUtil.disconnect();
   }

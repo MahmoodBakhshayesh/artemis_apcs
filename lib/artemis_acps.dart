@@ -226,6 +226,13 @@ class _GeneralWidget extends StatelessWidget {
                       builder: (context, kioskStatus, child) {
                         if (kioskStatus != null && kioskStatus.isOnline) {
                           if (generalWidgetBuilder != null) {
+                            return ValueListenableBuilder<List<ArtemisKioskDevice>>(
+                              valueListenable: controller.devices,
+                              builder: (context, value, child) {
+                                if (value.isEmpty) return SizedBox();
+                                return generalWidgetBuilder!(controller, workstation, socket, kioskStatus, value);
+                              },
+                            );
                             return generalWidgetBuilder!(controller, workstation, socket, kioskStatus, controller.devices.value);
                           }
                           return Container(
