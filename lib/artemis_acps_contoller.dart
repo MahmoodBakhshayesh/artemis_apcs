@@ -25,9 +25,10 @@ class ArtemisAcpsController {
   bool locked;
   BoardingPassCommand? bpConfig;
   BagTagCommand? btConfig;
+  void Function(String)? onError;
   void Function(ArtemisAcpsReceivedData receivedData)? onReceivedData;
 
-  ArtemisAcpsController({required this.baseUrl, required this.airport, required this.airline, this.bpConfig, this.btConfig, required this.locked});
+  ArtemisAcpsController({required this.baseUrl, required this.airport, required this.airline, this.bpConfig, this.btConfig, required this.locked,this.onReceivedData,this.onError});
 
   void reconfigure({required String newAirline, required String newAirport, required String newBaseUrl, BoardingPassCommand? newBpConfig, BagTagCommand? newBtConfig}) {
     baseUrl = newBaseUrl;
@@ -183,13 +184,15 @@ class ArtemisAcpsController {
         bagTag: BagTagCommand(printerId: bt?.deviceName, data: btCommandList.map((a) => AeaCommand(command: a)).toList()),
       );
       final res = await kioskUtil.invokeAeaCommand(command);
+      log("res deep ${res.message}");
       return res;
     } catch (e) {
       throw Exception("$e");
     }
   }
 
-  Future<ArtemisAcpsAeaResponse> testAeaPrint({bool hasBp = true, bool hasBt = true}) {
+  Future<ArtemisAcpsAeaResponse> testAeaPrint({bool hasBp = true, bool hasBt = true}) async {
+    // log("testAeaPrint1");
     String bp1 =
         '''PT##\$G6A#@;#TICK#CHEC#BOAR#0101110112011301210122012301C#0201A34#1919C54#2020C01#2104M04M68#2605C24D54#2903E54F#3030D01L#3207G02G60#3311H60K04#3408K22#3608G40#3903F54F#4030D24L#4110I60#4304G11#4404M57#4504G32#4710G19#50B6R011651#51B6R541651#6015I01L#6508C34#7021M14#7403D45D67F#7503D48D70F#8012J60K37#8212K60L37#8412L60M37#''';
     String bp2 =
@@ -200,7 +203,10 @@ class ArtemisAcpsController {
     String bt1 =
         "BTT0101*F 500185=#03C0M1145040402#04C0 1004200201#05B1 A007250631=04#06B1 A385250631=04#08C0 1015200201=04#09B1 A018250631=04#10C0 5395300201=04#11C0 5395100201=29#14C0M2169270402#15C0 1004040201#16C0 1015040201=15#17C0 5395460201=15#20B1M3039444041=04#21B1MA080244041=04#22C0M1135230303#23C0MA133130705#25C0M1147230303#26C0MA145130705#28C0MA169260504#29C0MB176260806#30C0MA187250806#31C0 A198260201#35C0 1004400201=29#41C0M1145120402=04#42C0M1150040402#43C0M1156040402#44C0M1162040402#45C0 5356440502#52C0 5361440502=43#53C0 5366440502=42#55C0 5371440502=29#62C0 5376440502=03#63C0 5376360502=04#64C0 5382440502=15#9AS0M1133010548#9BS0M1144010548#9CS0M1168010548#9DC0M3205450402#9FC0 1015400201=29#A1C0MA033240303=04#A2C0M4174470402=15#A3S0M1122010548#A4C0 E350250202INDIGO#";
     String bt2 = "BTP010101#036E#040312972277#15SEQ-0001#22#23#25#26#286E9999#29BBB#4219OCT24#4398765432#44PRINT/TEST#45PRINT/TEST#";
-    return printAeaData(bpCommandList: hasBp ? [bp1, bp2, bp3] : [], btCommandList: hasBt ? [bt1, bt2] : []);
+   final  res = await  printAeaData(bpCommandList: hasBp ? [bp1, bp2, bp3] : [], btCommandList: hasBt ? [bt1, bt2] : []);
+    // log("testAeaPrint2");
+   // log("res ${res.description}");
+   return res;
   }
 
   Future<bool> printApi({required List<ArtemisAcpsBoardingPass> bpList, required List<ArtemisAcpsBagtag> btList, ArtemisKioskDevice? bp, ArtemisKioskDevice? bt}) async {
@@ -220,8 +226,10 @@ class ArtemisAcpsController {
       log(workstation.value!.deviceId);
       // log(jsonEncode(command.toJson()));
       final res = await dio.post(api, data: command.toJson());
+      log(res.data.toString());
       return res.statusCode == 200;
     } catch (e) {
+      log(e.toString());
       rethrow;
     }
   }

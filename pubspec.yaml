@@ -1,6 +1,6 @@
 name: artemis_acps
 description: "A new Flutter package for acps printing"
-version: 0.0.8
+version: 0.0.9
 homepage: https://github.com/MahmoodBakhshayesh/artemis_apcs
 
 environment:

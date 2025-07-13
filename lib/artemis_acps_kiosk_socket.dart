@@ -60,13 +60,18 @@ class AcpsKioskUtil {
     controller.updateKioskStatus(kioskStatus);
   }
 
-  void handleError(String error) {}
+  void handleError(String error) {
+    controller.onError?.call(error);
+    // log("handle error ${error}");
+  }
 
   Future<bool> initDevices() async {
     return true;
   }
 
-  void updateReceivedData(ArtemisAcpsReceivedData receivedData) {}
+  void updateReceivedData(ArtemisAcpsReceivedData receivedData) {
+    controller.onReceivedData?.call(receivedData);
+  }
 
   refreshSocketStatus(HubConnectionState? status) {
     HubConnectionState s = status ?? HubConnectionState.Disconnected;
@@ -274,6 +279,11 @@ class AcpsKioskUtil {
               }
             }
             handleError(response.message ?? 'Unknown Error');
+            completeTransaction(response);
+          }else{
+            completeTransaction(response);
+
+            handleError(response.message ?? 'Unknown Error');
           }
         }
       }
@@ -301,7 +311,7 @@ class AcpsKioskUtil {
     inProgressAeaActions.putIfAbsent(transactionID, () => command);
     final completer = Completer<ArtemisAcpsAeaResponse>();
     _pendingAeaResponses[transactionID] = completer;
-
+    log("Added _pendingAeaResponses ${transactionID}");
     _hubConnection.invoke("AeaCommandRequest", args: [devId!, transactionID, command]);
     return completer.future.timeout(
       const Duration(seconds: 10),

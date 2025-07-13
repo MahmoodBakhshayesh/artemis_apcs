@@ -32,7 +32,16 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   List<ArtemisAcpsWorkstation> ws = [];
-  List<ArtemisAcps> acpsList = [ArtemisAcps(airport: 'zzz', baseUrl: 'https://printlayerapi-test.abomis.com', airline: "zz"), ArtemisAcps(airport: 'zzz', baseUrl: 'http://192.168.45.72:45457', airline: "zz")];
+  List<ArtemisAcps> acpsList = [ArtemisAcps(airport: 'zzz', baseUrl: 'https://printlayerapi-test.abomis.com', airline: "zz",onReceivedData: (a){
+    log("recievied ${a.data}");
+  },
+    onError: (e){
+      log("onErr ${e}");
+
+    }
+
+
+  ), ArtemisAcps(airport: 'zzz', baseUrl: 'http://192.168.45.72:45457', airline: "zz")];
 
   @override
   Widget build(BuildContext context) {
@@ -52,10 +61,10 @@ class _MyHomePageState extends State<MyHomePage> {
                         acps.getGeneralWidget(),
                         GeneralButton(
                           onPressed: () async {
-                              // ArtemisAcpsBoardingPass bp = ArtemisAcpsBoardingPass(name: "Mahmood BKH", title: "MR", seq: "1", fromCity: "YVR", toCity: "IST", classType: "E", passengerType: "ADL", seat: "2A", airlineCode: "ZZ", flightNumber: "1010", flightDate: DateTime.now(), std: "18:10", gate: '1', fromCityName: '', toCityName: '', airlineName: 'ZZ',  referenceNo: '', baggageCount: 1, baggageWeight: 2, barcodeData: 'dadsad', btd: '');
-                              // ArtemisAcpsBagtag bt = ArtemisAcpsBagtag(tagNumber: '1001001001', sixDigitNumber: '001001', name: 'Mahmood bkh', referenceNo: '1234', airlineThreeDigitCode: '001', baggageCount: 1, baggageWeight: 10, weightUnit: 'KG', firstAirportCode: 'ZZZ', firstAirportName: 'ZZZ', lastArilineCode: 'ZZ', lastAirlineName: 'ZZ', lastFlightNumber: '1010', lastFlightDate: '07OCT', lastAirportCode: 'ZZZ', lastAirportName: 'ZZZ', lastClassType: 'E', lastclass: 'E');
+                              ArtemisAcpsBoardingPass bp = ArtemisAcpsBoardingPass(name: "Mahmood BKH", title: "MR", seq: "1", fromCity: "YVR", toCity: "IST", classType: "E", passengerType: "ADL", seat: "2A", airlineCode: "ZZ", flightNumber: "1010", flightDate: '2020-12-12', std: "18:10", gate: '1', fromCityName: '', toCityName: '', airlineName: 'ZZ',  referenceNo: '', baggageCount: 1, baggageWeight: 2, barcodeData: 'dadsad', btd: '');
+                              ArtemisAcpsBagtag bt = ArtemisAcpsBagtag(tagNumber: '1001001001', sixDigitNumber: '001001', name: 'Mahmood bkh', referenceNo: '1234', airlineThreeDigitCode: '001', baggageCount: 1, baggageWeight: 10, weightUnit: 'KG', firstAirportCode: 'ZZZ', firstAirportName: 'ZZZ',  lastAirlineName: 'ZZ', lastFlightNumber: '1010', lastFlightDate: '07OCT', lastAirportCode: 'ZZZ', lastAirportName: 'ZZZ', lastClassType: 'E');
 
-                              // acps.controller.printApi(bpList: [bp],btList: [bt]);
+                              await acps.controller.printApi(bpList: [bp],btList: [bt]);
                               // final res = await acps.controller.printData(bpList: [bp],btList: [bt]);
                               // log(res.isSuccessful.toString());
 
@@ -64,13 +73,22 @@ class _MyHomePageState extends State<MyHomePage> {
                         ),
                         TextButton(
                           onPressed: () async {
-                              // acps.controller.testAeaPrint(hasBp: true,hasBt: true);
+                            try {
+                              final a = await acps.controller.testAeaPrint(hasBp: true, hasBt: false);
+                              if(!a.isSuccessful){
+                                log("errrrrrrr ${a.message}  || ${a.description}");
+                              }
+                              log("a ${a.description}");
+                            }catch(e){
+
+                            }
                           },
                           child: Text("test print"),
                         ),
                         TextButton(
                           onPressed: () async {
-                              String testBarcode ="bdcsprinterqr|kiosk|325a2328-5f72-45ba-aac4-18a4b35f92d3|3|https://testprintlayerapinew.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1||";
+                              // String testBarcode ="bdcsprinterqr|kiosk|325a2328-5f72-45ba-aac4-18a4b35f92d3|3|https://testprintlayerapinew.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1||";
+                              String testBarcode ="bdcsprinterqr|kiosk|e4c1bef7-3602-40bd-8c67-c54c3b3a4313|3|https://testprintlayerapinew.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|3-9-9-KIOSKSALLY|";
                               acps.controller.connectWorkstationWithQr(testBarcode);
                           },
                           child: Text("connect qr"),

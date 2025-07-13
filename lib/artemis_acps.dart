@@ -9,13 +9,16 @@ import 'package:artemis_acps/widgets/workstation_select_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:signalr_netcore/hub_connection.dart';
 import 'artemis_acps_contoller.dart';
+import 'classes/artemis_acps_aea_command_class.dart';
 
 class ArtemisAcps {
   late final ArtemisAcpsController _controller;
   final GeneralButtonStyle? buttonStyle;
+  void Function(ArtemisAcpsReceivedData receivedData)? onReceivedData;
+  void Function(String error)? onError;
 
-  ArtemisAcps({required String baseUrl, required String airport, required String airline, ArtemisAcpsController? controller, bool locked = false, this.buttonStyle}) {
-    _controller = controller ?? ArtemisAcpsController(baseUrl: baseUrl, airport: airport, airline: airline, locked: locked);
+  ArtemisAcps({required String baseUrl, required String airport, required String airline, ArtemisAcpsController? controller, bool locked = false, this.buttonStyle, this.onReceivedData, this.onError}) {
+    _controller = controller ?? ArtemisAcpsController(baseUrl: baseUrl, airport: airport, airline: airline, locked: locked,onReceivedData: onReceivedData,onError: onError);
   }
 
   Widget getSocketStatusWidget() {
@@ -31,7 +34,7 @@ class ArtemisAcps {
   }
 
   Widget getKioskDevicesWidget({List<String> filter = const [], List<String> statusFilters = const [], double? size}) {
-    return _KioskDevicesWidget(controller: _controller, filters: filter,statusFilters:statusFilters, size: size ?? 30);
+    return _KioskDevicesWidget(controller: _controller, filters: filter, statusFilters: statusFilters, size: size ?? 30);
   }
 
   Widget getGeneralWidget({
@@ -151,7 +154,12 @@ class _KioskDevicesWidget extends StatelessWidget {
         return Row(
           spacing: 1,
           mainAxisSize: MainAxisSize.min,
-          children: value.where((b)=>statusFilters.isEmpty || statusFilters.contains(b.status)).where((a) => filters.isEmpty || filters.map((f) => f.toLowerCase()).contains(a.getType.toLowerCase())).map((a) => Image.asset(a.img, width: size, package: 'artemis_acps')).toList(),
+          children:
+              value
+                  .where((b) => statusFilters.isEmpty || statusFilters.contains(b.status))
+                  .where((a) => filters.isEmpty || filters.map((f) => f.toLowerCase()).contains(a.getType.toLowerCase()))
+                  .map((a) => Image.asset(a.img, width: size, package: 'artemis_acps'))
+                  .toList(),
         );
       },
     );
@@ -169,7 +177,17 @@ class _GeneralWidget extends StatelessWidget {
   final Widget Function(ArtemisAcpsController controller, ArtemisAcpsWorkstation? worksation, HubConnectionState socketState, ArtemisAcpsKioskStatus? kioskStatus)? kioskWidgetBuilder;
   final Widget Function(ArtemisAcpsController controller, ArtemisAcpsWorkstation? worksation, HubConnectionState socketState, ArtemisAcpsKioskStatus? kioskStatus, List<ArtemisKioskDevice> devices)? generalWidgetBuilder;
 
-  const _GeneralWidget({required this.controller, required this.filters,required this.statusFilters, required this.size, this.generalButtonStyle, this.workstationWidgetBuilder, this.socketWidgetBuilder, this.kioskWidgetBuilder, this.generalWidgetBuilder});
+  const _GeneralWidget({
+    required this.controller,
+    required this.filters,
+    required this.statusFilters,
+    required this.size,
+    this.generalButtonStyle,
+    this.workstationWidgetBuilder,
+    this.socketWidgetBuilder,
+    this.kioskWidgetBuilder,
+    this.generalWidgetBuilder,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -239,7 +257,7 @@ class _GeneralWidget extends StatelessWidget {
                             height: size,
                             padding: EdgeInsets.all(1),
                             decoration: BoxDecoration(border: Border.all(color: Color(0xff00cf37)), borderRadius: BorderRadius.circular(8)),
-                            child: Stack(children: [_KioskDevicesWidget(controller: controller, filters: filters, statusFilters:statusFilters,size: size - 2)]),
+                            child: Stack(children: [_KioskDevicesWidget(controller: controller, filters: filters, statusFilters: statusFilters, size: size - 2)]),
                           );
                         }
                         if (kioskWidgetBuilder != null) {
