@@ -114,7 +114,7 @@ class ArtemisAcpsController {
     if (isGeneralPrinterQrKiosk(qr)) {
       var c = ArtemisAcpsKioskConfig.fromBarcode(qr);
 
-      ArtemisAcpsWorkstation workstation = ArtemisAcpsWorkstation(deviceId: c.deviceId, workstationName: c.deviceName ?? 'QR-connected', computerName: c.deviceName ?? 'QR-connected', airportToken: c.airportToken, kioskId: null);
+      ArtemisAcpsWorkstation workstation = ArtemisAcpsWorkstation(deviceId: c.deviceId, workstationName: c.deviceName ?? 'QR-connected', computerName: c.deviceName ?? 'QR-connected', airportToken: c.airportToken, kioskId: c.kioskId);
       updateWorkstation(workstation);
       // final w = workstation.toConfig();
       final connection = await kioskUtil.connect(c);
