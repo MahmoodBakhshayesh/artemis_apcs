@@ -255,29 +255,29 @@ class AcpsKioskUtil {
         }
         if (!response.isSuccessful && response.message != null) {
           if (!response.isSuccessful && response.message != "ERRTIMEOUT" && response.message?.toLowerCase() != "timeout") {
-            if ((response.message ?? '').startsWith("HDCERR6") || (response.message ?? '').startsWith("HDCERR3")) {
-              if (retriedTransactions.contains(response.transactionId)) {
-                handleError(response.message ?? 'Unknown Error');
-                return;
-              }
-              retriedTransactions.add(response.transactionId);
-              ArtemisAcpsAeaCommand? command = inProgressAeaActions[response.transactionId];
-              if (command != null) {
-                bool initRes = await initDevices();
-                if (initRes) {
-                  invokeAeaCommand(command, overrideTransactionID: response.transactionId);
-                  completeTransaction(response);
-                  // inProgressAeaActions.remove(response.transactionId);
-                  // _pendingAeaResponses[response.transactionId]?.complete(response);
-                  // _pendingAeaResponses.remove(response.transactionId);
-                  //
-                  // inProgressDirectActions.removeWhere((a, b) => a == response.transactionId);
-                  // _pendingDirectResponses[response.transactionId]?.complete(response);
-                  // _pendingDirectResponses.remove(response.transactionId);
-                  return;
-                }
-              }
-            }
+            // if ((response.message ?? '').startsWith("HDCERR6") || (response.message ?? '').startsWith("HDCERR3")) {
+            //   if (retriedTransactions.contains(response.transactionId)) {
+            //     handleError(response.message ?? 'Unknown Error');
+            //     return;
+            //   }
+            //   retriedTransactions.add(response.transactionId);
+            //   ArtemisAcpsAeaCommand? command = inProgressAeaActions[response.transactionId];
+            //   if (command != null) {
+            //     bool initRes = await initDevices();
+            //     if (initRes) {
+            //       invokeAeaCommand(command, overrideTransactionID: response.transactionId);
+            //       completeTransaction(response);
+            //       // inProgressAeaActions.remove(response.transactionId);
+            //       // _pendingAeaResponses[response.transactionId]?.complete(response);
+            //       // _pendingAeaResponses.remove(response.transactionId);
+            //       //
+            //       // inProgressDirectActions.removeWhere((a, b) => a == response.transactionId);
+            //       // _pendingDirectResponses[response.transactionId]?.complete(response);
+            //       // _pendingDirectResponses.remove(response.transactionId);
+            //       return;
+            //     }
+            //   }
+            // }
             handleError(response.message ?? 'Unknown Error');
             completeTransaction(response);
           }else{
