@@ -1,11 +1,11 @@
+import 'dart:developer';
+
 import 'package:artemis_acps/classes/artemis_acps_kiosk_class.dart';
 import 'package:artemis_acps/classes/artemis_acps_workstation_class.dart';
 import 'package:artemis_acps/classes/artemis_kiosk_device_class.dart';
 import 'package:artemis_acps/classes/artemis_kiosk_status_class.dart';
 import 'package:artemis_acps/classes/general_button_style_class.dart';
-import 'package:artemis_acps/widgets/configure_dialog.dart';
 import 'package:artemis_acps/widgets/general_buttom.dart';
-import 'package:artemis_acps/widgets/workstation_select_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:signalr_netcore/hub_connection.dart';
 import 'artemis_acps_contoller.dart';
@@ -243,15 +243,15 @@ class _GeneralWidget extends StatelessWidget {
                       valueListenable: controller.kioskStatus,
                       builder: (context, kioskStatus, child) {
                         if (kioskStatus != null && kioskStatus.isOnline) {
+
                           if (generalWidgetBuilder != null) {
                             return ValueListenableBuilder<List<ArtemisKioskDevice>>(
                               valueListenable: controller.devices,
                               builder: (context, value, child) {
-                                if (value.isEmpty) return SizedBox();
                                 return generalWidgetBuilder!(controller, workstation, socket, kioskStatus, value);
                               },
                             );
-                            return generalWidgetBuilder!(controller, workstation, socket, kioskStatus, controller.devices.value);
+                            // return generalWidgetBuilder!(controller, workstation, socket, kioskStatus, controller.devices.value);
                           }
                           return Container(
                             height: size,

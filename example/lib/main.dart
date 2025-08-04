@@ -58,7 +58,15 @@ class _MyHomePageState extends State<MyHomePage> {
                         // acps.getSocketStatusWidget(),
                         // acps.getKioskStatusWidget(),
                         // acps.getKioskDevicesWidget(filter: [],size: 35),
-                        acps.getGeneralWidget(),
+                        acps.getGeneralWidget(
+                          generalWidgetBuilder: (_,__,___,a,d){
+                            if(d.isEmpty){
+                              return Text("Empty");
+                            }
+                            return acps.getGeneralWidget();
+                          }
+                        ),
+
                         GeneralButton(
                           onPressed: () async {
                               ArtemisAcpsBoardingPass bp = ArtemisAcpsBoardingPass(name: "Mahmood BKH", title: "MR", seq: "1", fromCity: "YVR", toCity: "IST", classType: "E", passengerType: "ADL", seat: "2A", airlineCode: "ZZ", flightNumber: "1010", flightDate: '2020-12-12', std: "18:10", gate: '1', fromCityName: '', toCityName: '', airlineName: 'ZZ',  referenceNo: '', baggageCount: 1, baggageWeight: 2, barcodeData: 'dadsad', btd: '');
@@ -88,7 +96,8 @@ class _MyHomePageState extends State<MyHomePage> {
                         TextButton(
                           onPressed: () async {
                               // String testBarcode ="bdcsprinterqr|kiosk|325a2328-5f72-45ba-aac4-18a4b35f92d3|3|https://testprintlayerapinew.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1||";
-                              String testBarcode ="bdcsprinterqr|kiosk|e4c1bef7-3602-40bd-8c67-c54c3b3a4313|3|https://testprintlayerapinew.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|3-9-9-KIOSKSALLY|";
+                              // String testBarcode ="bdcsprinterqr|kiosk|e4c1bef7-3602-40bd-8c67-c54c3b3a4313|3|https://testprintlayerapinew.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|3-9-9-KIOSKSALLY|";
+                              String testBarcode ="bdcsprinterqr|kiosk|1b4e1c7b-0779-4626-ae36-6209a3ef298a|3|https://printlayerapi-test.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|1025-1037-1046-KIOSK115|";
                               acps.controller.connectWorkstationWithQr(testBarcode);
                           },
                           child: Text("connect qr"),
