@@ -97,7 +97,10 @@ class _MyHomePageState extends State<MyHomePage> {
                           onPressed: () async {
                               // String testBarcode ="bdcsprinterqr|kiosk|325a2328-5f72-45ba-aac4-18a4b35f92d3|3|https://testprintlayerapinew.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1||";
                               // String testBarcode ="bdcsprinterqr|kiosk|e4c1bef7-3602-40bd-8c67-c54c3b3a4313|3|https://testprintlayerapinew.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|3-9-9-KIOSKSALLY|";
-                              String testBarcode ="bdcsprinterqr|kiosk|1b4e1c7b-0779-4626-ae36-6209a3ef298a|3|https://printlayerapi-test.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|1025-1037-1046-KIOSK115|";
+                              // String testBarcode ="bdcsprinterqr|kiosk|1b4e1c7b-0779-4626-ae36-6209a3ef298a|3|https://printlayerapi-test.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|1025-1037-1046-KIOSK115|";
+                              // String testBarcode ="bdcsprinterqr|kiosk|1b4e1c7b-0779-4626-ae36-6209a3ef298a|3|https://testprintlayerapinew.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|1026-1036-1045-KIOSK115|";
+                              String testBarcode ="bdcsprinterqr|kiosk|e4c1bef7-3602-40bd-8c67-c54c3b3a4313|3|https://testprintlayerapinew.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|3-9-9-KIOSKSALLY|";
+                              ///https://testprintlayerapinew.abomis.com/ACPSHub?DeviceID=e4c1bef7-3602-40bd-8c67-c54c3b3a4313&IsDcs=3&AirportToken=adf6624a-9f82-4e11-93af-f34ecca4fca1
                               acps.controller.connectWorkstationWithQr(testBarcode);
                           },
                           child: Text("connect qr"),

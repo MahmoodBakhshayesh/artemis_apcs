@@ -106,7 +106,7 @@ class ArtemisAcpsController {
     final w = workstation.toConfig().copyWith(baseUrl: "$baseUrl/ACPSHub");
     final connection = await kioskUtil.connect(w);
     if (connection) {
-      await kioskUtil.subscribe();
+      // await kioskUtil.subscribe();
     }
   }
 
@@ -118,9 +118,9 @@ class ArtemisAcpsController {
       updateWorkstation(workstation);
       // final w = workstation.toConfig();
       final connection = await kioskUtil.connect(c);
-      if (connection) {
-        await kioskUtil.subscribe();
-      }
+      // if (connection) {
+      //   await kioskUtil.subscribe();
+      // }
     }
   }
 

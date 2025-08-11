@@ -61,6 +61,7 @@ class AcpsKioskUtil {
   }
 
   void handleError(String error) {
+    log("handleError ${error}");
     controller.onError?.call(error);
     // log("handle error ${error}");
   }
@@ -118,6 +119,8 @@ class AcpsKioskUtil {
             _hubConnection.on("OnReaderData", onReaderData);
             _hubConnection.on("AeaDirectResponse", aeaDirectResponse);
             _hubConnection.on("AeaResponse", aeaResponse);
+            subscribe();
+
             response = true;
           })
           .onError((error, stackTrace) {
@@ -135,6 +138,8 @@ class AcpsKioskUtil {
       response = false;
       refreshSocketStatus(_hubConnection.state);
     });
+    _hubConnection.onreconnecting(_onReconnecting);
+    _hubConnection.onreconnected(_onReconnected);
 
     return response;
   }
@@ -235,6 +240,7 @@ class AcpsKioskUtil {
       }
     } catch (e) {
       log(e.toString());
+      handleError(e.toString());
     }
   }
 
@@ -360,5 +366,17 @@ class AcpsKioskUtil {
     if (_config == null) return;
     await disconnect();
     connect(_config!);
+  }
+
+  void _onReconnecting({Exception? error}) {
+    log("_onReconnecting ${error.toString()}");
+    if(error!=null){
+      reconnect();
+    }
+  }
+
+  void _onReconnected({String? connectionId}) {
+
+    log("_onReconnected ${connectionId.toString()}");
   }
 }
