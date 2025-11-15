@@ -64,6 +64,10 @@ class ArtemisAcps {
   }
 
   ArtemisAcpsController get controller => _controller;
+
+  ArtemisAcpsKiosk? get kiosk => _controller.kiosk.value;
+  Map<String,dynamic>? get kioskSettingMap => _controller.kioskSettingMap;
+  Map<String,dynamic>? get kioskSettingAllMap => _controller.kioskAllSettingMap;
 }
 
 class _SocketStatusWidget extends StatelessWidget {

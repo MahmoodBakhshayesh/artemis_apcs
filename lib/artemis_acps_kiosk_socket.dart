@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'package:artemis_acps/artemis_acps_contoller.dart';
+import 'package:artemis_acps/classes/artemis_kiosk_setting_row_class.dart';
 import 'package:signalr_netcore/ihub_protocol.dart';
 import 'package:signalr_netcore/signalr_client.dart';
 import 'classes/artemis_acps_aea_command_class.dart';
@@ -28,6 +29,7 @@ class AcpsKioskUtil {
   Map<String, ArtemisAcpsDirectCommand> inProgressDirectActions = {};
   final Map<String, Completer<ArtemisAcpsAeaResponse>> _pendingDirectResponses = {};
   List<String> retriedTransactions = [];
+  List<ArtemisKioskSettingRow> kioskSetting = [];
 
 
   List<String> get bpCommandKeysDirect => inProgressDirectActions.entries
@@ -344,6 +346,13 @@ class AcpsKioskUtil {
     );
   }
 
+  Future<List<ArtemisKioskSettingRow>?> getKioskSetting(ArtemisAcpsKioskConfig config) async {
+    if(devId==null){
+      return null;
+    }
+  }
+
+
   void invokeAeaPRCommand(PrCommand command) {
     command = command.copyWith(deviceId: devId!);
     log("invoking\n${command.toJson()}");
@@ -378,5 +387,9 @@ class AcpsKioskUtil {
   void _onReconnected({String? connectionId}) {
 
     log("_onReconnected ${connectionId.toString()}");
+  }
+
+  void setKioskSetting(List<ArtemisKioskSettingRow> settings) {
+
   }
 }

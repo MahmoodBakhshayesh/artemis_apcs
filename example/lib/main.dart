@@ -32,7 +32,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   List<ArtemisAcpsWorkstation> ws = [];
-  List<ArtemisAcps> acpsList = [ArtemisAcps(airport: 'zzz', baseUrl: 'https://printlayerapi-test.abomis.com', airline: "zz",onReceivedData: (a){
+  List<ArtemisAcps> acpsList = [ArtemisAcps(airport: 'zzz', baseUrl: 'https://printlayerapi.abomis.com', airline: "zz",onReceivedData: (a){
     log("recievied ${a.data}");
   },
     onError: (e){
@@ -54,6 +54,8 @@ class _MyHomePageState extends State<MyHomePage> {
                   .map(
                     (acps) => Column(
                       children: [
+                        ...(acps.kioskSettingMap??{}).keys.map((a)=>Text(a)),
+
                         // acps.getKioskWidget(),
                         // acps.getSocketStatusWidget(),
                         // acps.getKioskStatusWidget(),
@@ -111,11 +113,17 @@ class _MyHomePageState extends State<MyHomePage> {
                           },
                           child: Text("Disconnect"),
                         ),
+                        // TextButton(
+                        //   onPressed: () async {
+                        //       await acps.controller.reconnectSocket();
+                        //   },
+                        //   child: Text("Reconnect"),
+                        // ),
                         TextButton(
                           onPressed: () async {
-                              await acps.controller.reconnectSocket();
+                              log(acps.kioskSettingMap.toString());
                           },
-                          child: Text("Reconnect"),
+                          child: Text("setting"),
                         ),
                         Divider(),
                       ],
