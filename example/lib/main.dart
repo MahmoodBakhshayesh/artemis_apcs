@@ -108,7 +108,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           onPressed: () async {
                             log("${acps.kiosk?.deviceId}");
                             log("${acps.kioskSettingAllMap}");
-                            acps.controller.broadcastData("omid LoooLe kesh");
+                            acps.controller.broadcastData("omid LoooLe kesh 2");
 
                           },
                           child: Text("broadcast data"),

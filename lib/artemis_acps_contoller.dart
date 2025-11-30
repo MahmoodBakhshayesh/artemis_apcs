@@ -271,6 +271,7 @@ class ArtemisAcpsController {
 
   Future<void> disconnectSocket() async {
     await kioskUtil.disconnect();
+    await readerSocket.disconnect();
 
   }
 
@@ -317,7 +318,7 @@ class ArtemisAcpsController {
     }
  try {
    final info = await AppDeviceNetworkInfo.getAll();
-   ArtemisAcpsDeviceConfig config = ArtemisAcpsDeviceConfig(timeout: 10, deviceId: info.device.id, deviceType: "bc", workstationToken: (kioskAllSettingMap??{})["hardwareID"], version: info.app.versionKey??'', os: info.device.os.name);
+   ArtemisAcpsDeviceConfig config = ArtemisAcpsDeviceConfig(timeout: 10, deviceId: info.device.id, deviceType: "bc_device", workstationToken: (kioskAllSettingMap??{})["hardwareID"], version: info.app.versionKey??'', os: info.device.os.name);
 
    final connection = await readerSocket.connect(config);
       log("connection ${connection}");
