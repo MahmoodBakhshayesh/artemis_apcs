@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:developer';
 
+import 'package:app_device_net_info/app_device_net_info.dart';
+import 'package:artemis_acps/artemis_acps_reader_socket.dart';
 import 'package:artemis_acps/classes/artemis_acps_bagtag_class.dart';
 import 'package:artemis_acps/classes/artemis_acps_boarding_pass_class.dart';
 import 'package:artemis_acps/classes/artemis_acps_kiosk_class.dart';
@@ -14,12 +16,14 @@ import 'package:signalr_netcore/hub_connection.dart';
 
 import 'artemis_acps_kiosk_socket.dart';
 import 'classes/artemis_acps_aea_command_class.dart';
+import 'classes/artemis_acps_device_config_class.dart';
 import 'classes/artemis_acps_workstation_class.dart';
 import 'widgets/configure_dialog.dart';
 import 'widgets/workstation_select_dialog.dart';
 
 class ArtemisAcpsController {
   late AcpsKioskUtil kioskUtil = AcpsKioskUtil(controller: this);
+  late AcpsAcpsReaderSocket readerSocket = AcpsAcpsReaderSocket(controller: this);
   String baseUrl;
   String airport;
   String airline;
@@ -118,22 +122,28 @@ class ArtemisAcpsController {
   }
 
   Future<void> connectWorkstationWithQr(String qr) async {
-    if (isGeneralPrinterQrKiosk(qr)) {
-      var c = ArtemisAcpsKioskConfig.fromBarcode(qr);
+    try {
+      if (isGeneralPrinterQrKiosk(qr)) {
+        var c = ArtemisAcpsKioskConfig.fromBarcode(qr);
 
-      ArtemisAcpsWorkstation workstation = ArtemisAcpsWorkstation(
-        deviceId: c.deviceId,
-        workstationName: c.deviceName ?? 'QR-connected',
-        computerName: c.deviceName ?? 'QR-connected',
-        airportToken: c.airportToken,
-        kioskId: c.kioskId,
-      );
-      updateWorkstation(workstation);
-      // final w = workstation.toConfig();
-      final connection = await kioskUtil.connect(c);
-      if (connection) {
-        await getKioskSetting(c);
+        ArtemisAcpsWorkstation workstation = ArtemisAcpsWorkstation(
+          deviceId: c.deviceId,
+          workstationName: c.deviceName ?? 'QR-connected',
+          computerName: c.deviceName ?? 'QR-connected',
+          airportToken: c.airportToken,
+          kioskId: c.kioskId,
+        );
+        updateWorkstation(workstation);
+        // final w = workstation.toConfig();
+        final connection = await kioskUtil.connect(c);
+        if (connection) {
+          await getKioskSetting(c);
+        }
+      }else{
+        log("invalid barcode");
       }
+    }catch(e){
+      log("$e");
     }
   }
 
@@ -297,5 +307,29 @@ class ArtemisAcpsController {
     updateWorkstation(null);
     updateKiosk(null);
     kioskSettings.value = null;
+  }
+
+  Future<void> connectAsScanner() async {
+    log("connect as scanner");
+    if(kiosk.value == null || !(kioskAllSettingMap??{}).containsKey("hardwareID")){
+      log("${kiosk.value == null} -- ${!(kioskAllSettingMap??{}).containsKey("hardwareID")}");
+      return;
+    }
+ try {
+   final info = await AppDeviceNetworkInfo.getAll();
+   ArtemisAcpsDeviceConfig config = ArtemisAcpsDeviceConfig(timeout: 10, deviceId: info.device.id, deviceType: "bc", workstationToken: (kioskAllSettingMap??{})["hardwareID"], version: info.app.versionKey??'', os: info.device.os.name);
+
+   final connection = await readerSocket.connect(config);
+      log("connection ${connection}");
+    }catch(e){
+      log("${e}");
+      if (e is Error){
+        log("${e.stackTrace}");
+      }
+    }
+  }
+
+  Future<void> broadcastData(String data)async{
+    readerSocket.broadcastData(data);
   }
 }
