@@ -44,8 +44,10 @@ class ArtemisAcpsBroadcastData {
     deviceType: json["DeviceType"]
   );
 
+  String get devId=> "$deviceId-${deviceType}";
+
   Map<String, dynamic> toJson() => {
-    "DeviceID": deviceId,
+    "DeviceID": devId,
     "WorkstationToken": workstationToken,
     "TransactionId": transactionId,
     "Message": message,

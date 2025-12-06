@@ -66,7 +66,7 @@ class AcpsAcpsReaderSocket {
 
   refreshSocketStatus(HubConnectionState? status) {
     HubConnectionState s = status ?? HubConnectionState.Disconnected;
-    controller.updateSocketStatus(s);
+    controller.updateReaderSocketStatus(s);
     return;
   }
 
@@ -279,18 +279,28 @@ class AcpsAcpsReaderSocket {
   }
 
   broadcastData(String data) async {
-    if (_config == null) {
-      return;
+    log("broadcastData $data");
+    try {
+      if (_config == null) {
+        log("config of reader is null");
+        return;
+      }
+      ArtemisAcpsBroadcastData d = ArtemisAcpsBroadcastData(deviceId: _config!.devId,
+          workstationToken: _config!.workstationToken,
+          deviceType: _config!.deviceType!.typeName,
+          message: data,
+          messageType: "BARCODE");
+      await invokeBroadcast(d);
+    }catch(e){
+      log("E $e");
     }
-    ArtemisAcpsBroadcastData d = ArtemisAcpsBroadcastData(deviceId: _config!.deviceId, workstationToken: _config!.workstationToken, deviceType: _config!.deviceType, message: data, messageType: "BARCODE");
-    await invokeBroadcast(d);
   }
 
   Future<ArtemisAcpsAeaResponse> invokeBroadcast(ArtemisAcpsBroadcastData data, {String? overrideTransactionID}) async {
     String transactionID = overrideTransactionID ?? generateTransactionID();
     data = data.copyWith(deviceId: devId!, transactionId: transactionID,messageType: "BARCODE");
 
-    // log("invoking\n${data.toJson()} TrID:$transactionID ${data.message}");
+    log("invoking\n${data.toJson()} TrID:$transactionID ${data.message}");
     inProgressAeaActions.putIfAbsent(transactionID, () => data);
     final completer = Completer<ArtemisAcpsAeaResponse>();
     _pendingAeaResponses[transactionID] = completer;

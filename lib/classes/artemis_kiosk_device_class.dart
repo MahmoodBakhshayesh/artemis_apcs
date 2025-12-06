@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import '../enums/acps_print_type_enum.dart';
 
 class ArtemisKioskDevice {
@@ -36,7 +38,7 @@ class ArtemisKioskDevice {
 
   String get img {
     String address= "assets/images/devices/$status/${deviceName.substring(0,2).toUpperCase()}.${status=="printing"?"gif":"png"}";
-    // print(address);
+    // log(address);
     return address;
   }
 

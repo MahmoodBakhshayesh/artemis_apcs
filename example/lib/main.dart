@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'package:artemis_acps/artemis_acps.dart';
 import 'package:artemis_acps/classes/artemis_acps_bagtag_class.dart';
 import 'package:artemis_acps/classes/artemis_acps_boarding_pass_class.dart';
+import 'package:artemis_acps/classes/artemis_acps_device_config_class.dart';
 import 'package:artemis_acps/classes/artemis_acps_workstation_class.dart';
 import 'package:artemis_acps/widgets/general_buttom.dart';
 import 'package:flutter/material.dart';
@@ -43,113 +44,238 @@ class _MyHomePageState extends State<MyHomePage> {
 
   ), ArtemisAcps(airport: 'zzz', baseUrl: 'http://192.168.45.72:45457', airline: "zz")];
 
+  final ArtemisAcpsReader readeAcpsBc = ArtemisAcpsReader(airport: 'sin', baseUrl: 'https://printlayerapi.abomis.com', airline: "zz",deviceType: ReaderDeviceType.bcDevice);
+  final ArtemisAcpsReader readeAcpsOc = ArtemisAcpsReader(airport: 'sin', baseUrl: 'https://printlayerapi.abomis.com', airline: "zz",deviceType: ReaderDeviceType.ocDevice);
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(backgroundColor: Theme.of(context).colorScheme.inversePrimary, title: Text("")),
       body: Center(
-        child: Column(
-          children:
-              acpsList.sublist(0,1)
-                  .map(
-                    (acps) => Column(
-                      children: [
-                        // ...(acps.kioskSettingMap??{}).keys.map((a)=>Text(a)),
-
-                        // acps.getKioskWidget(),
-                        // acps.getSocketStatusWidget(),
-                        // acps.getKioskStatusWidget(),
-                        // acps.getKioskDevicesWidget(filter: [],size: 35),
-                        acps.getGeneralWidget(
-                          generalWidgetBuilder: (_,__,___,a,d){
-                            if(d.isEmpty){
-                              return Text("Empty");
-                            }
-                            return acps.getGeneralWidget();
-                          }
-                        ),
-
-                        GeneralButton(
-                          onPressed: () async {
-                              ArtemisAcpsBoardingPass bp = ArtemisAcpsBoardingPass(name: "Mahmood BKH", title: "MR", seq: "1", fromCity: "YVR", toCity: "IST", classType: "E", passengerType: "ADL", seat: "2A", airlineCode: "ZZ", flightNumber: "1010", flightDate: '2020-12-12', std: "18:10", gate: '1', fromCityName: '', toCityName: '', airlineName: 'ZZ',  referenceNo: '', baggageCount: 1, baggageWeight: 2, barcodeData: 'dadsad', btd: '');
-                              ArtemisAcpsBagtag bt = ArtemisAcpsBagtag(tagNumber: '1001001001', sixDigitNumber: '001001', name: 'Mahmood bkh', referenceNo: '1234', airlineThreeDigitCode: '001', baggageCount: 1, baggageWeight: 10, weightUnit: 'KG', firstAirportCode: 'ZZZ', firstAirportName: 'ZZZ',  lastAirlineName: 'ZZ', lastFlightNumber: '1010', lastFlightDate: '07OCT', lastAirportCode: 'ZZZ', lastAirportName: 'ZZZ', lastClassType: 'E');
-
-                              await acps.controller.printApi(bpList: [bp],btList: [bt]);
-                              // final res = await acps.controller.printData(bpList: [bp],btList: [bt]);
-                              // log(res.isSuccessful.toString());
-
-                          },
-                          label: 'Print Data',
-                        ),
-                        TextButton(
-                          onPressed: () async {
-                            try {
-                              final a = await acps.controller.testAeaPrint(hasBp: true, hasBt: false);
-                              if(!a.isSuccessful){
-                                log("errrrrrrr ${a.message}  || ${a.description}");
+        child: SingleChildScrollView(
+          child: Column(
+            children:
+               [ ...acpsList.sublist(0,1)
+                    .map(
+                      (acps) => Column(
+                        children: [
+                          // ...(acps.kioskSettingMap??{}).keys.map((a)=>Text(a)),
+          
+                          // acps.getKioskWidget(),
+                          // acps.getSocketStatusWidget(),
+                          // acps.getKioskStatusWidget(),
+                          // acps.getKioskDevicesWidget(filter: [],size: 35),
+                          acps.getGeneralWidget(
+                            generalWidgetBuilder: (_,__,___,a,d){
+                              if(d.isEmpty){
+                                return Text("Empty");
                               }
-                              log("a ${a.description}");
-                            }catch(e){
-
+                              return acps.getGeneralWidget();
                             }
-                          },
-                          child: Text("test print"),
-                        ),
-                        TextButton(
-                          onPressed: () async {
-                            log("${acps.kiosk?.deviceId}");
-                            log("${acps.kioskSettingAllMap}");
-                            acps.controller.connectAsScanner();
-
-                          },
-                          child: Text("connect as scanner"),
-                        ),
-                        TextButton(
-                          onPressed: () async {
-                            log("${acps.kiosk?.deviceId}");
-                            log("${acps.kioskSettingAllMap}");
-                            acps.controller.broadcastData("omid LoooLe kesh 2");
-
-                          },
-                          child: Text("broadcast data"),
-                        ),
-                        TextButton(
-                          onPressed: () async {
-                              // String testBarcode ="bdcsprinterqr|kiosk|325a2328-5f72-45ba-aac4-18a4b35f92d3|3|https://testprintlayerapinew.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1||";
-                              // String testBarcode ="bdcsprinterqr|kiosk|e4c1bef7-3602-40bd-8c67-c54c3b3a4313|3|https://testprintlayerapinew.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|3-9-9-KIOSKSALLY|";
-                              // String testBarcode ="bdcsprinterqr|kiosk|1b4e1c7b-0779-4626-ae36-6209a3ef298a|3|https://printlayerapi-test.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|1025-1037-1046-KIOSK115|";
-                              // String testBarcode ="bdcsprinterqr|kiosk|1b4e1c7b-0779-4626-ae36-6209a3ef298a|3|https://testprintlayerapinew.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|1026-1036-1045-KIOSK115|";
-                              // String testBarcode ="bdcsprinterqr|kiosk|e4c1bef7-3602-40bd-8c67-c54c3b3a4313|3|https://testprintlayerapinew.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|3-9-9-KIOSKSALLY|";
-                              String testBarcode ="bdcsprinterqr|kiosk|e4c1bef7-3602-40bd-8c67-c54c3b3a4313|3|https://printlayerapi.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|1033-1045-1054-KIOSKALLY|";
-                              ///https://testprintlayerapinew.abomis.com/ACPSHub?DeviceID=e4c1bef7-3602-40bd-8c67-c54c3b3a4313&IsDcs=3&AirportToken=adf6624a-9f82-4e11-93af-f34ecca4fca1
-                              log("tes ${testBarcode}");
-                              acps.controller.connectWorkstationWithQr(testBarcode);
-                          },
-                          child: Text("connect qr"),
-                        ),
-                        TextButton(
-                          onPressed: () async {
-                              await acps.controller.disconnectSocket();
-                          },
-                          child: Text("Disconnect"),
-                        ),
-                        // TextButton(
-                        //   onPressed: () async {
-                        //       await acps.controller.reconnectSocket();
-                        //   },
-                        //   child: Text("Reconnect"),
-                        // ),
-                        TextButton(
-                          onPressed: () async {
-                              log(acps.kioskSettingMap.toString());
-                          },
-                          child: Text("setting"),
-                        ),
-                        Divider(),
-                      ],
-                    ),
-                  )
-                  .toList(),
+                          ),
+          
+                          GeneralButton(
+                            onPressed: () async {
+                                ArtemisAcpsBoardingPass bp = ArtemisAcpsBoardingPass(name: "Mahmood BKH", title: "MR", seq: "1", fromCity: "YVR", toCity: "IST", classType: "E", passengerType: "ADL", seat: "2A", airlineCode: "ZZ", flightNumber: "1010", flightDate: '2020-12-12', std: "18:10", gate: '1', fromCityName: '', toCityName: '', airlineName: 'ZZ',  referenceNo: '', baggageCount: 1, baggageWeight: 2, barcodeData: 'dadsad', btd: '');
+                                ArtemisAcpsBagtag bt = ArtemisAcpsBagtag(tagNumber: '1001001001', sixDigitNumber: '001001', name: 'Mahmood bkh', referenceNo: '1234', airlineThreeDigitCode: '001', baggageCount: 1, baggageWeight: 10, weightUnit: 'KG', firstAirportCode: 'ZZZ', firstAirportName: 'ZZZ',  lastAirlineName: 'ZZ', lastFlightNumber: '1010', lastFlightDate: '07OCT', lastAirportCode: 'ZZZ', lastAirportName: 'ZZZ', lastClassType: 'E');
+          
+                                await acps.controller.printApi(bpList: [bp],btList: [bt]);
+                                // final res = await acps.controller.printData(bpList: [bp],btList: [bt]);
+                                // log(res.isSuccessful.toString());
+          
+                            },
+                            label: 'Print Data',
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              try {
+                                final a = await acps.controller.testAeaPrint(hasBp: true, hasBt: false);
+                                if(!a.isSuccessful){
+                                  log("errrrrrrr ${a.message}  || ${a.description}");
+                                }
+                                log("a ${a.description}");
+                              }catch(e){
+          
+                              }
+                            },
+                            child: Text("test print"),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              log("${acps.kiosk?.deviceId}");
+                              log("${acps.kioskSettingAllMap}");
+                              acps.controller.connectAsScanner();
+          
+                            },
+                            child: Text("connect as scanner"),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              log("${acps.kiosk?.deviceId}");
+                              log("${acps.kioskSettingAllMap}");
+                              acps.controller.broadcastData("omid LoooLe kesh 2");
+          
+                            },
+                            child: Text("broadcast data"),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                                // String testBarcode ="bdcsprinterqr|kiosk|325a2328-5f72-45ba-aac4-18a4b35f92d3|3|https://testprintlayerapinew.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1||";
+                                // String testBarcode ="bdcsprinterqr|kiosk|e4c1bef7-3602-40bd-8c67-c54c3b3a4313|3|https://testprintlayerapinew.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|3-9-9-KIOSKSALLY|";
+                                // String testBarcode ="bdcsprinterqr|kiosk|1b4e1c7b-0779-4626-ae36-6209a3ef298a|3|https://printlayerapi-test.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|1025-1037-1046-KIOSK115|";
+                                // String testBarcode ="bdcsprinterqr|kiosk|1b4e1c7b-0779-4626-ae36-6209a3ef298a|3|https://testprintlayerapinew.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|1026-1036-1045-KIOSK115|";
+                                // String testBarcode ="bdcsprinterqr|kiosk|e4c1bef7-3602-40bd-8c67-c54c3b3a4313|3|https://testprintlayerapinew.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|3-9-9-KIOSKSALLY|";
+                                String testBarcode ="bdcsprinterqr|kiosk|e4c1bef7-3602-40bd-8c67-c54c3b3a4313|3|https://printlayerapi.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|1033-1045-1054-KIOSKALLY|";
+                                ///https://testprintlayerapinew.abomis.com/ACPSHub?DeviceID=e4c1bef7-3602-40bd-8c67-c54c3b3a4313&IsDcs=3&AirportToken=adf6624a-9f82-4e11-93af-f34ecca4fca1
+                                log("tes ${testBarcode}");
+                                acps.controller.connectWorkstationWithQr(testBarcode);
+                            },
+                            child: Text("connect qr"),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                                await acps.controller.disconnectSocket();
+                            },
+                            child: Text("Disconnect"),
+                          ),
+                          // TextButton(
+                          //   onPressed: () async {
+                          //       await acps.controller.reconnectSocket();
+                          //   },
+                          //   child: Text("Reconnect"),
+                          // ),
+                          TextButton(
+                            onPressed: () async {
+                                log(acps.kioskSettingMap.toString());
+                            },
+                            child: Text("setting"),
+                          ),
+                          Divider(),
+                        ],
+                      ),
+                    )
+                    .toList(),
+                 Column(
+                   children: [
+                     readeAcpsBc.getGeneralWidget(
+                         generalWidgetBuilder: (_,__,___,a,d){
+                           if(d.isEmpty){
+                             return Text("Empty");
+                           }
+                           return readeAcpsBc.getGeneralWidget();
+                         }
+                     ),
+          
+                     TextButton(
+                       onPressed: () async {
+                         readeAcpsBc.controller.connectAsScanner();
+                       },
+                       child: Text("connect as scanner"),
+                     ),
+                     TextButton(
+                       onPressed: () async {
+                         readeAcpsBc.controller.broadcastData("omid LoooLe kesh 2");
+          
+                       },
+                       child: Text("broadcast data"),
+                     ),
+                     TextButton(
+                       onPressed: () async {
+                         // String testBarcode ="bdcsprinterqr|kiosk|325a2328-5f72-45ba-aac4-18a4b35f92d3|3|https://testprintlayerapinew.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1||";
+                         // String testBarcode ="bdcsprinterqr|kiosk|e4c1bef7-3602-40bd-8c67-c54c3b3a4313|3|https://testprintlayerapinew.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|3-9-9-KIOSKSALLY|";
+                         // String testBarcode ="bdcsprinterqr|kiosk|1b4e1c7b-0779-4626-ae36-6209a3ef298a|3|https://printlayerapi-test.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|1025-1037-1046-KIOSK115|";
+                         // String testBarcode ="bdcsprinterqr|kiosk|1b4e1c7b-0779-4626-ae36-6209a3ef298a|3|https://testprintlayerapinew.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|1026-1036-1045-KIOSK115|";
+                         // String testBarcode ="bdcsprinterqr|kiosk|e4c1bef7-3602-40bd-8c67-c54c3b3a4313|3|https://testprintlayerapinew.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|3-9-9-KIOSKSALLY|";
+                         String testBarcode ="bdcsprinterqr|kiosk|e4c1bef7-3602-40bd-8c67-c54c3b3a4313|3|https://printlayerapi.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|1033-1045-1054-KIOSKALLY|";
+                         ///https://testprintlayerapinew.abomis.com/ACPSHub?DeviceID=e4c1bef7-3602-40bd-8c67-c54c3b3a4313&IsDcs=3&AirportToken=adf6624a-9f82-4e11-93af-f34ecca4fca1
+                         log("tes ${testBarcode}");
+                         readeAcpsBc.controller.connectWorkstationAsReaderWithQr(testBarcode);
+                       },
+                       child: Text("connect qr"),
+                     ),
+                     TextButton(
+                       onPressed: () async {
+                         await readeAcpsBc.controller.disconnectSocket();
+                       },
+                       child: Text("Disconnect"),
+                     ),
+                     // TextButton(
+                     //   onPressed: () async {
+                     //       await acps.controller.reconnectSocket();
+                     //   },
+                     //   child: Text("Reconnect"),
+                     // ),
+                     TextButton(
+                       onPressed: () async {
+                         log(readeAcpsBc.kioskSettingMap.toString());
+                       },
+                       child: Text("setting"),
+                     ),
+                     Divider(),
+                   ],
+                 ),
+                 Column(
+                   children: [
+                     readeAcpsOc.getGeneralWidget(
+                         generalWidgetBuilder: (_,__,___,a,d){
+                           if(d.isEmpty){
+                             return Text("Empty");
+                           }
+                           return readeAcpsBc.getGeneralWidget();
+                         }
+                     ),
+          
+                     TextButton(
+                       onPressed: () async {
+                         readeAcpsOc.controller.connectAsScanner();
+                       },
+                       child: Text("connect as scanner"),
+                     ),
+                     TextButton(
+                       onPressed: () async {
+                         readeAcpsOc.controller.broadcastData("omid LoooLe kesh 2");
+          
+                       },
+                       child: Text("broadcast data"),
+                     ),
+                     TextButton(
+                       onPressed: () async {
+                         // String testBarcode ="bdcsprinterqr|kiosk|325a2328-5f72-45ba-aac4-18a4b35f92d3|3|https://testprintlayerapinew.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1||";
+                         // String testBarcode ="bdcsprinterqr|kiosk|e4c1bef7-3602-40bd-8c67-c54c3b3a4313|3|https://testprintlayerapinew.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|3-9-9-KIOSKSALLY|";
+                         // String testBarcode ="bdcsprinterqr|kiosk|1b4e1c7b-0779-4626-ae36-6209a3ef298a|3|https://printlayerapi-test.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|1025-1037-1046-KIOSK115|";
+                         // String testBarcode ="bdcsprinterqr|kiosk|1b4e1c7b-0779-4626-ae36-6209a3ef298a|3|https://testprintlayerapinew.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|1026-1036-1045-KIOSK115|";
+                         // String testBarcode ="bdcsprinterqr|kiosk|e4c1bef7-3602-40bd-8c67-c54c3b3a4313|3|https://testprintlayerapinew.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|3-9-9-KIOSKSALLY|";
+                         String testBarcode ="bdcsprinterqr|kiosk|e4c1bef7-3602-40bd-8c67-c54c3b3a4313|3|https://printlayerapi.abomis.com/ACPSHub|adf6624a-9f82-4e11-93af-f34ecca4fca1|1033-1045-1054-KIOSKALLY|";
+                         ///https://testprintlayerapinew.abomis.com/ACPSHub?DeviceID=e4c1bef7-3602-40bd-8c67-c54c3b3a4313&IsDcs=3&AirportToken=adf6624a-9f82-4e11-93af-f34ecca4fca1
+                         log("tes ${testBarcode}");
+                         readeAcpsOc.controller.connectWorkstationAsReaderWithQr(testBarcode);
+                       },
+                       child: Text("connect qr"),
+                     ),
+                     TextButton(
+                       onPressed: () async {
+                         await readeAcpsOc.controller.disconnectSocket();
+                       },
+                       child: Text("Disconnect"),
+                     ),
+                     // TextButton(
+                     //   onPressed: () async {
+                     //       await acps.controller.reconnectSocket();
+                     //   },
+                     //   child: Text("Reconnect"),
+                     // ),
+                     TextButton(
+                       onPressed: () async {
+                         log(readeAcpsOc.kioskSettingMap.toString());
+                       },
+                       child: Text("setting"),
+                     ),
+                     Divider(),
+                   ],
+                 ),
+          
+               ]
+          
+          ),
         ),
         // child: Column(
         //   children: <Widget>[

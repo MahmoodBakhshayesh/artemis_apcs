@@ -1,6 +1,8 @@
+import 'package:artemis_acps/extensions/list_ext.dart';
+
 class ArtemisAcpsDeviceConfig {
   final String deviceId;
-  final String? deviceType;
+  final ReaderDeviceType? deviceType;
   final String workstationToken;
   final int timeout;
   final String version;
@@ -17,7 +19,7 @@ class ArtemisAcpsDeviceConfig {
 
   ArtemisAcpsDeviceConfig copyWith({
     String? deviceId,
-    String? deviceType,
+    ReaderDeviceType? deviceType,
     String? workstationToken,
     int? timeout,
     String? version,
@@ -34,19 +36,20 @@ class ArtemisAcpsDeviceConfig {
 
   factory ArtemisAcpsDeviceConfig.fromJson(Map<String, dynamic> json) => ArtemisAcpsDeviceConfig(
     deviceId: json["DeviceID"],
-    deviceType: json["DeviceType"],
+    deviceType: ReaderDeviceType.values.firstWhereOrNull((a)=>a.typeName == json["DeviceType"]),
     workstationToken: json["WorkstationToken"],
     timeout: json["Timeout"],
     version: json["Version"],
     os: json["OS"],
   );
 
-  String get getUrl => "https://cupps.abomis.com/hubs/platformHub?type=${deviceType}&device_id=${deviceId}&token=${workstationToken}&handshake_timeout=${timeout}&version=${version}&os=${os}";
+  String get devId => "${deviceId}-${deviceType?.typeName}";
+  String get getUrl => "https://cupps.abomis.com/hubs/platformHub?type=${deviceType?.typeName}&device_id=${devId}&token=${workstationToken}&handshake_timeout=${timeout}&version=${version}&os=${os}";
 
 
   Map<String, dynamic> toJson() => {
-    "DeviceID": deviceId,
-    "DeviceType": deviceType,
+    "DeviceID": devId,
+    "DeviceType": deviceType?.typeName,
     "WorkstationToken": workstationToken,
     "Timeout": timeout,
     "Version": version,
@@ -54,4 +57,20 @@ class ArtemisAcpsDeviceConfig {
   };
 
 
+}
+
+enum ReaderDeviceType {
+  bcDevice,
+  ocDevice
+}
+
+extension ReaderDeviceTypeDetails on ReaderDeviceType {
+  String get typeName {
+    switch(this){
+      case ReaderDeviceType.bcDevice:
+        return "bc_device";
+      case ReaderDeviceType.ocDevice:
+        return "oc_device";
+    }
+  }
 }
