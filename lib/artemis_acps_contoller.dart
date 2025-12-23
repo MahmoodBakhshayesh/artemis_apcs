@@ -10,6 +10,7 @@ import 'package:artemis_acps/classes/artemis_acps_kiosk_config_class.dart';
 import 'package:artemis_acps/classes/artemis_kiosk_device_class.dart';
 import 'package:artemis_acps/classes/artemis_kiosk_setting_row_class.dart';
 import 'package:artemis_acps/classes/artemis_kiosk_status_class.dart';
+import 'package:artemis_acps/extensions/list_ext.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:signalr_netcore/hub_connection.dart';
@@ -23,18 +24,21 @@ import 'widgets/workstation_select_dialog.dart';
 
 class ArtemisAcpsController {
   late AcpsKioskUtil kioskUtil = AcpsKioskUtil(controller: this);
-  late AcpsAcpsReaderSocket readerSocket = AcpsAcpsReaderSocket(controller: this);
+
+  // late AcpsAcpsReaderSocket readerSocket = AcpsAcpsReaderSocket(controller: this);
+
   String baseUrl;
   String airport;
   String airline;
   bool locked;
   BoardingPassCommand? bpConfig;
   BagTagCommand? btConfig;
-  ReaderDeviceType deviceType;
+
+  // ReaderDeviceType deviceType;
   void Function(String)? onError;
   void Function(ArtemisAcpsReceivedData receivedData)? onReceivedData;
 
-  ArtemisAcpsController({required this.baseUrl, required this.airport, required this.airline, this.bpConfig, this.btConfig, required this.locked, this.onReceivedData, this.onError,this.deviceType = ReaderDeviceType.bcDevice});
+  ArtemisAcpsController({required this.baseUrl, required this.airport, required this.airline, this.bpConfig, this.btConfig, required this.locked, this.onReceivedData, this.onError});
 
   void reconfigure({required String newAirline, required String newAirport, required String newBaseUrl, BoardingPassCommand? newBpConfig, BagTagCommand? newBtConfig}) {
     baseUrl = newBaseUrl;
@@ -51,6 +55,7 @@ class ArtemisAcpsController {
   final ValueNotifier<ArtemisAcpsKiosk?> kiosk = ValueNotifier<ArtemisAcpsKiosk?>(null);
   final ValueNotifier<ArtemisAcpsKioskStatus?> kioskStatus = ValueNotifier<ArtemisAcpsKioskStatus?>(null);
   final ValueNotifier<List<ArtemisKioskDevice>> devices = ValueNotifier<List<ArtemisKioskDevice>>([]);
+  final ValueNotifier<List<AcpsAcpsReaderSocket>> readerDevicesNotifier = ValueNotifier<List<AcpsAcpsReaderSocket>>([]);
   late ValueNotifier<String> station = ValueNotifier<String>(airport);
   late ValueNotifier<List<String>> printingBpsAea = ValueNotifier<List<String>>(kioskUtil.bpCommandKeysAea);
   late ValueNotifier<List<String>> printingBpsDirect = ValueNotifier<List<String>>(kioskUtil.bpCommandKeysDirect);
@@ -61,6 +66,8 @@ class ArtemisAcpsController {
   Map<String, dynamic>? get kioskSettingMap => kioskSettings.value == null ? null : Map.fromEntries(kioskSettings.value!.where((a) => a.isActive).map((x) => MapEntry(x.key, x.value)));
 
   Map<String, dynamic>? get kioskAllSettingMap => kioskSettings.value == null ? null : Map.fromEntries(kioskSettings.value!.map((x) => MapEntry(x.key, x.value)));
+
+  List<AcpsAcpsReaderSocket> get readerDevices => readerDevicesNotifier.value;
 
   void dispose() {
     socketStatus.dispose();
@@ -131,7 +138,7 @@ class ArtemisAcpsController {
     log("connectWorkstationAsReader");
     updateWorkstation(workstation);
     await getKioskSetting(workstation.toConfig());
-    await connectAsScanner();
+    await addVirtualScanner(readerType);
     // final w = workstation.toConfig().copyWith(baseUrl: "$baseUrl/ACPSHub");
     // final connection = await readerSocket.connect(w);
     // if (connection) {
@@ -164,25 +171,26 @@ class ArtemisAcpsController {
       log("$e");
     }
   }
-  Future<void> connectWorkstationAsReaderWithQr(String qr) async {
-    try {
-      if (isGeneralPrinterQrKiosk(qr)) {
-        var c = ArtemisAcpsKioskConfig.fromBarcode(qr);
-        ArtemisAcpsWorkstation workstation = ArtemisAcpsWorkstation(
-          deviceId: c.deviceId,
-          workstationName: c.deviceName ?? 'QR-connected',
-          computerName: c.deviceName ?? 'QR-connected',
-          airportToken: c.airportToken,
-          kioskId: c.kioskId,
-        );
-        connectWorkstationAsReader(workstation,deviceType);
-      } else {
-        log("invalid barcode");
-      }
-    } catch (e) {
-      log("$e");
-    }
-  }
+
+  // Future<void> connectWorkstationAsReaderWithQr(String qr) async {
+  //   try {
+  //     if (isGeneralPrinterQrKiosk(qr)) {
+  //       var c = ArtemisAcpsKioskConfig.fromBarcode(qr);
+  //       ArtemisAcpsWorkstation workstation = ArtemisAcpsWorkstation(
+  //         deviceId: c.deviceId,
+  //         workstationName: c.deviceName ?? 'QR-connected',
+  //         computerName: c.deviceName ?? 'QR-connected',
+  //         airportToken: c.airportToken,
+  //         kioskId: c.kioskId,
+  //       );
+  //       connectWorkstationAsReader(workstation,deviceType);
+  //     } else {
+  //       log("invalid barcode");
+  //     }
+  //   } catch (e) {
+  //     log("$e");
+  //   }
+  // }
 
   getKioskSetting(ArtemisAcpsKioskConfig c) async {
     try {
@@ -307,7 +315,10 @@ class ArtemisAcpsController {
 
   Future<void> disconnectSocket() async {
     await kioskUtil.disconnect();
-    await readerSocket.disconnect();
+    for (var rd in readerDevices) {
+      await rd.disconnect();
+    }
+    // await readerSocket.disconnect();
   }
 
   Future<void> reconnectSocket() async {
@@ -315,12 +326,15 @@ class ArtemisAcpsController {
   }
 
   Future<void> reconnectReaderSocket() async {
-    await readerSocket.reconnect();
+    for (var rd in readerDevices) {
+      await rd.reconnect();
+    }
+    // await readerSocket.reconnect();
   }
 
   bool isGeneralPrinterQrKiosk(String barcode) => barcode.toLowerCase().startsWith("bdcsprinterqr|kiosk|") && barcode.split("|").length >= 6;
 
-  Future<void> selectWorkstation(BuildContext context, {bool readerMode = false, ReaderDeviceType readerType = ReaderDeviceType.bcDevice}) async {
+  Future<void> selectWorkstation(BuildContext context) async {
     final ws = await getWorkstations();
     final selected = await showDialog(
       context: context,
@@ -329,11 +343,7 @@ class ArtemisAcpsController {
       },
     );
     if (selected is ArtemisAcpsWorkstation) {
-      if (readerMode) {
-        connectWorkstationAsReader(selected, readerType);
-      } else {
-        connectWorkstation(selected);
-      }
+      connectWorkstation(selected);
     }
   }
 
@@ -346,18 +356,23 @@ class ArtemisAcpsController {
     );
   }
 
-  void disconnect() {
+  Future<void> disconnect() async {
     disconnectSocket();
     updateWorkstation(null);
     updateKiosk(null);
     kioskSettings.value = null;
+    for (var rd in readerDevices) {
+      await rd.disconnect();
+    }
+    readerDevices.clear();
+    readerDevicesNotifier.notifyListeners();
+
   }
 
-  Future<void> connectAsScanner() async {
+  Future<void> addVirtualScanner(ReaderDeviceType deviceType) async {
     log("connect as scanner");
-    if ( !(kioskAllSettingMap ?? {}).containsKey("hardwareID")) {
+    if (!(kioskAllSettingMap ?? {}).containsKey("hardwareID")) {
       log("${!(kioskAllSettingMap ?? {}).containsKey("hardwareID")}");
-
       return;
     }
     try {
@@ -370,10 +385,14 @@ class ArtemisAcpsController {
         version: info.app.versionKey ?? '',
         os: info.device.os.name,
       );
+      final AcpsAcpsReaderSocket readerSocket = readerDevices.firstWhere((a) => a.readerType == deviceType, orElse: () => AcpsAcpsReaderSocket(controller: this, readerType: deviceType));
       final connection = await readerSocket.connect(config);
-      if(connection){
-        Future.delayed(Duration(milliseconds: 10),(){
-
+      if (connection) {
+        Future.delayed(Duration(milliseconds: 10), () {
+          if(!readerDevices.any((a)=>a.readerType == deviceType)){
+            readerDevices.add(readerSocket);
+            readerDevicesNotifier.notifyListeners();
+          }
         });
       }
       log("connection ${connection}");
@@ -385,7 +404,25 @@ class ArtemisAcpsController {
     }
   }
 
-  Future<void> broadcastData(String data) async {
+  Future<void> disconnectScanner(ReaderDeviceType deviceType) async {
+    log("connect as scanner");
+    try {
+      final AcpsAcpsReaderSocket? readerSocket = readerDevices.firstWhereOrNull((a) => a.readerType == deviceType);
+      await readerSocket?.disconnect();
+      if (readerSocket != null) {
+        readerDevices.remove(readerSocket);
+        readerDevicesNotifier.notifyListeners();
+
+      }
+    } catch (e) {
+      log("${e}");
+      if (e is Error) {
+        log("${e.stackTrace}");
+      }
+    }
+  }
+
+  Future<void> broadcastData(AcpsAcpsReaderSocket readerSocket, String data) async {
     log("broadcastData");
     readerSocket.broadcastData(data);
   }

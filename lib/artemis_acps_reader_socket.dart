@@ -1,24 +1,37 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
-import 'package:artemis_acps/artemis_acps_contoller.dart';
-import 'package:artemis_acps/classes/artemis_kiosk_setting_row_class.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:signalr_netcore/ihub_protocol.dart';
 import 'package:signalr_netcore/signalr_client.dart';
+
+import 'artemis_acps_contoller.dart';
 import 'classes/artemis_acps_aea_command_class.dart';
 import 'classes/artemis_acps_broadcast_data_class.dart';
 import 'classes/artemis_acps_device_config_class.dart';
 import 'classes/artemis_acps_kiosk_class.dart';
-import 'classes/artemis_acps_kiosk_config_class.dart';
-import 'classes/artemis_kiosk_status_class.dart';
+import 'classes/artemis_kiosk_setting_row_class.dart';
+import 'classes/artemis_kiosk_status_class.dart'; // ✅ ChangeNotifier
 
-class AcpsAcpsReaderSocket {
+class AcpsAcpsReaderSocket extends ChangeNotifier {
   final ArtemisAcpsController controller;
+  final ReaderDeviceType readerType;
 
   late HubConnection _hubConnection =
       HubConnectionBuilder()
           .withUrl('www.artemis.com', options: HttpConnectionOptions(skipNegotiation: true, transport: HttpTransportType.WebSockets, headers: MessageHeaders(), accessTokenFactory: () async => jsonEncode({})))
           .build();
+
+  // ✅ per-instance status
+  HubConnectionState _status = HubConnectionState.Disconnected;
+
+  HubConnectionState get status => _status;
+
+  // If you still want the controller to know about it too, keep this.
+  // If you truly want to stop using controller.updateReaderSocketStatus,
+  // set this to false.
+  final bool syncStatusToController;
 
   String? get devId => _config?.deviceId;
   String al = "ZZ";
@@ -39,7 +52,23 @@ class AcpsAcpsReaderSocket {
 
   List<String> get bpCommandKeysAea => inProgressAeaActions.entries.map((entry) => entry.key).toList();
 
-  AcpsAcpsReaderSocket({required this.controller});
+  AcpsAcpsReaderSocket({
+    required this.controller,
+    required this.readerType,
+    this.syncStatusToController = false, // ✅ default: per-instance only
+  });
+
+  String _asset(String state, bool isBc) => "assets/images/devices/$state/${isBc ? 'BC' : 'OC'}.png";
+
+  String get img {
+    final isBc = readerType == ReaderDeviceType.bcDevice;
+
+    return switch (status) {
+      HubConnectionState.Connected => _asset("ready", isBc),
+      HubConnectionState.Connecting || HubConnectionState.Reconnecting => _asset("init", isBc),
+      _ => _asset("powerOff", isBc),
+    };
+  }
 
   void kioskRefresh(ArtemisAcpsKiosk? kiosk) {
     controller.updateKiosk(kiosk);
@@ -51,9 +80,8 @@ class AcpsAcpsReaderSocket {
   }
 
   void handleError(String error) {
-    log("handleError ${error}");
+    log("handleError $error");
     controller.onError?.call(error);
-    // log("handle error ${error}");
   }
 
   Future<bool> initDevices() async {
@@ -64,30 +92,44 @@ class AcpsAcpsReaderSocket {
     controller.onReceivedData?.call(receivedData);
   }
 
-  refreshSocketStatus(HubConnectionState? status) {
-    HubConnectionState s = status ?? HubConnectionState.Disconnected;
-    controller.updateReaderSocketStatus(s);
-    return;
+  // ✅ THIS is the key: instance-level, listenable status
+  void refreshSocketStatus(HubConnectionState? status) {
+    final s = status ?? HubConnectionState.Disconnected;
+
+    if (_status != s) {
+      _status = s;
+      notifyListeners(); // 🔥 UI refresh for THIS instance
+    }
+
+    // Optional backward compatibility (keep old behavior if you want)
+    if (syncStatusToController) {
+      controller.updateReaderSocketStatus(s);
+    }
   }
 
   Future<bool> connect(ArtemisAcpsDeviceConfig config) async {
     log("connect as reader");
     bool response = true;
     _config = config;
-    // print("Checkin ${_connectAddress } vs ${config.getStationQR}");
+
     if (_connectAddress == config.getUrl) {
       response = true;
     }
+
     try {
       final defaultHeaders = MessageHeaders();
       await disconnect();
+
       String url = config.getUrl;
       log("URL $url");
+
       _hubConnection =
           HubConnectionBuilder()
               .withUrl(url, options: HttpConnectionOptions(skipNegotiation: true, transport: HttpTransportType.WebSockets, headers: defaultHeaders, accessTokenFactory: () async => jsonEncode(defaultHeaders.asMap)))
               .build();
+
       refreshSocketStatus(HubConnectionState.Connecting);
+
       await _hubConnection
           .start()!
           .catchError((e) {
@@ -117,11 +159,13 @@ class AcpsAcpsReaderSocket {
       removeAcps();
       response = false;
     }
+
     _hubConnection.onclose(({error}) {
       _connectAddress = null;
       response = false;
       refreshSocketStatus(_hubConnection.state);
     });
+
     _hubConnection.onreconnecting(_onReconnecting);
     _hubConnection.onreconnected(_onReconnected);
 
@@ -129,10 +173,7 @@ class AcpsAcpsReaderSocket {
   }
 
   Future<void> handShake() async {
-    // log("handShaking log ${DateTime.now()}");
-    _hubConnection.invoke("handshake", args: null).then((a) {
-      // log("a = ${a}");
-    });
+    _hubConnection.invoke("handshake", args: null).then((a) {});
     Future.delayed(Duration(seconds: _config!.timeout), () {
       handShake();
     });
@@ -149,9 +190,8 @@ class AcpsAcpsReaderSocket {
 
   void onVirtualDeviceRequest(List<Object?>? arguments) {
     try {
-      // log("OnVirtualDeviceRequest\n$arguments");
       if ((arguments ?? []).isNotEmpty) {
-        log("${arguments}");
+        log("$arguments");
       }
     } catch (e) {
       log("$e");
@@ -173,99 +213,6 @@ class AcpsAcpsReaderSocket {
     }
   }
 
-  // void onReaderData(List<Object?>? arguments) {
-  //   // [{data: WIFI:T:WPA;P:FARA@131313;S:FARANEGAR;H:FALSE;, deviceType: BC, deviceName: BC1, deviceID: 25C3C33E-1A05-42FC-8528-9409AFF23D59, readTime: 2024-08-15T14:31:07.0396548Z}]
-  //   log("OnReaderData\n$arguments");
-  //   try {
-  //     if ((arguments ?? []).isNotEmpty) {
-  //       ArtemisAcpsReceivedData receivedData = ArtemisAcpsReceivedData.fromJson(arguments!.first as Map<String, dynamic>);
-  //       updateReceivedData(receivedData);
-  //       controller.onReceivedData?.call(receivedData);
-  //       if (receivedData.deviceType == "BG") {
-  //         ArtemisAcpsBroadcastData req = ArtemisAcpsBroadcastData(
-  //           deviceId: devId!,
-  //           airlineCode: al,
-  //           gateReader: GateReaderCommand(gateReaderId: null, data: [GateReaderAeaCommand(command: "CB#02", message: "Success", isSuccess: null)]),
-  //         );
-  //         invokeAeaCommand(req);
-  //       }
-  //       if (receivedData.deviceType == "BP") {
-  //         ArtemisAcpsBroadcastData req = ArtemisAcpsBroadcastData(
-  //           deviceId: devId!,
-  //           airlineCode: al,
-  //           boardingPass: BoardingPassCommand(
-  //             printerId: null,
-  //             data: [
-  //               AeaCommand(
-  //                 command:
-  //                     "CP#1C01#01S#021#03NOAH ALVES#04CDG#05FRA#06LH#07723#08NOAH ALVES#09LH#10ECONOMY#1121JUN#1208:58#13CDG#14FRA#15Y#16ECONOMY#1721JUN#18QLCB3#21#2208:28#238F#248F#261#300#310#36@40#44A/8#50PASSENGER#51FROM#52TO#53SEAT#54GATE#55SEQ#56PCS#57WT#58NO SMOKING#59CLASS#60DATE#61TIME#62FLIGHT NO.#63TKNO.#65PNR#66BOARDING PASS#67NO SMOKING#68BTD#FAM1NOAH ALVES          QLCB3   CDGFRALH 723  172Y8F  1    100#FBM1NOAH ALVES          QLCB3   CDGFRALH 723  172Y8F  1    100#",
-  //               ),
-  //             ],
-  //           ),
-  //         );
-  //         invokeAeaCommand(req);
-  //       }
-  //     }
-  //   } catch (e) {
-  //     log(e.toString());
-  //     handleError(e.toString());
-  //   }
-  // }
-  //
-  // Future<void> aeaDirectResponse(List<Object?>? arguments) async {
-  //   log("aeaDirectResponse\n$arguments");
-  //   try {
-  //     if ((arguments ?? []).isNotEmpty) {
-  //       ArtemisAcpsAeaResponse response = ArtemisAcpsAeaResponse.fromJson(arguments!.first as Map<String, dynamic>);
-  //       if (response.isSuccessful) {
-  //         completeTransaction(response);
-  //         // inProgressAeaActions.removeWhere((a, b) => a == response.transactionId);
-  //         // _pendingAeaResponses[response.transactionId]?.complete(response);
-  //         // _pendingAeaResponses.remove(response.transactionId);
-  //         //
-  //         // inProgressDirectActions.removeWhere((a, b) => a == response.transactionId);
-  //         // _pendingDirectResponses[response.transactionId]?.complete(response);
-  //         // _pendingDirectResponses.remove(response.transactionId);
-  //       }
-  //       if (!response.isSuccessful && response.message != null) {
-  //         if (!response.isSuccessful && response.message != "ERRTIMEOUT" && response.message?.toLowerCase() != "timeout") {
-  //           // if ((response.message ?? '').startsWith("HDCERR6") || (response.message ?? '').startsWith("HDCERR3")) {
-  //           //   if (retriedTransactions.contains(response.transactionId)) {
-  //           //     handleError(response.message ?? 'Unknown Error');
-  //           //     return;
-  //           //   }
-  //           //   retriedTransactions.add(response.transactionId);
-  //           //   ArtemisAcpsBroadcastData? command = inProgressAeaActions[response.transactionId];
-  //           //   if (command != null) {
-  //           //     bool initRes = await initDevices();
-  //           //     if (initRes) {
-  //           //       invokeAeaCommand(command, overrideTransactionID: response.transactionId);
-  //           //       completeTransaction(response);
-  //           //       // inProgressAeaActions.remove(response.transactionId);
-  //           //       // _pendingAeaResponses[response.transactionId]?.complete(response);
-  //           //       // _pendingAeaResponses.remove(response.transactionId);
-  //           //       //
-  //           //       // inProgressDirectActions.removeWhere((a, b) => a == response.transactionId);
-  //           //       // _pendingDirectResponses[response.transactionId]?.complete(response);
-  //           //       // _pendingDirectResponses.remove(response.transactionId);
-  //           //       return;
-  //           //     }
-  //           //   }
-  //           // }
-  //           handleError(response.message ?? 'Unknown Error');
-  //           completeTransaction(response);
-  //         } else {
-  //           completeTransaction(response);
-  //
-  //           handleError(response.message ?? 'Unknown Error');
-  //         }
-  //       }
-  //     }
-  //   } catch (e) {
-  //     log((e as Error).stackTrace.toString());
-  //   }
-  // }
-
   completeTransaction(ArtemisAcpsAeaResponse response) {
     String transactionId = response.transactionId;
 
@@ -278,6 +225,7 @@ class AcpsAcpsReaderSocket {
     _pendingDirectResponses.remove(transactionId);
   }
 
+  // ✅ kept (you explicitly said you missed this)
   broadcastData(String data) async {
     log("broadcastData $data");
     try {
@@ -285,27 +233,24 @@ class AcpsAcpsReaderSocket {
         log("config of reader is null");
         return;
       }
-      ArtemisAcpsBroadcastData d = ArtemisAcpsBroadcastData(deviceId: _config!.devId,
-          workstationToken: _config!.workstationToken,
-          deviceType: _config!.deviceType!.typeName,
-          message: data,
-          messageType: "BARCODE");
+      ArtemisAcpsBroadcastData d = ArtemisAcpsBroadcastData(deviceId: _config!.devId, workstationToken: _config!.workstationToken, deviceType: _config!.deviceType!.typeName, message: data, messageType: "BARCODE");
       await invokeBroadcast(d);
-    }catch(e){
+    } catch (e) {
       log("E $e");
     }
   }
 
   Future<ArtemisAcpsAeaResponse> invokeBroadcast(ArtemisAcpsBroadcastData data, {String? overrideTransactionID}) async {
     String transactionID = overrideTransactionID ?? generateTransactionID();
-    data = data.copyWith(deviceId: devId!, transactionId: transactionID,messageType: "BARCODE");
+    data = data.copyWith(deviceId: devId!, transactionId: transactionID, messageType: "BARCODE");
 
     log("invoking\n${data.toJson()} TrID:$transactionID ${data.message}");
     inProgressAeaActions.putIfAbsent(transactionID, () => data);
     final completer = Completer<ArtemisAcpsAeaResponse>();
     _pendingAeaResponses[transactionID] = completer;
-    // log("Added _pendingAeaResponses ${transactionID}");
+
     _hubConnection.invoke("VirtualDeviceResponse", args: [data]);
+
     return completer.future.timeout(
       const Duration(seconds: 10),
       onTimeout: () {
@@ -313,29 +258,6 @@ class AcpsAcpsReaderSocket {
       },
     );
   }
-
-  // Future<ArtemisAcpsAeaResponse> invokeDirectCommand(ArtemisAcpsDirectCommand command, {String? overrideTransactionID}) async {
-  //   command = command.copyWith(deviceId: devId!);
-  //   String transactionID = overrideTransactionID ?? generateTransactionID();
-  //   log("invoking\n DevID:$devId TrID:$transactionID ${command.boardingPass?.data.length} BPs ${command.bagTag?.data.length} BTs");
-  //   inProgressDirectActions.putIfAbsent(transactionID, () => command);
-  //   final completer = Completer<ArtemisAcpsAeaResponse>();
-  //   _pendingDirectResponses[transactionID] = completer;
-  //
-  //   _hubConnection.invoke("SendPrintAEA", args: [devId!, transactionID, command]);
-  //   return completer.future.timeout(
-  //     const Duration(seconds: 100),
-  //     onTimeout: () {
-  //       throw TimeoutException("Operation timed out after 10 Seconds");
-  //     },
-  //   );
-  // }
-  //
-  // Future<List<ArtemisKioskSettingRow>?> getKioskSetting(ArtemisAcpsKioskConfig config) async {
-  //   if (devId == null) {
-  //     return null;
-  //   }
-  // }
 
   void invokeAeaPRCommand(PrCommand command) {
     command = command.copyWith(deviceId: devId!);
@@ -373,4 +295,18 @@ class AcpsAcpsReaderSocket {
   }
 
   void setKioskSetting(List<ArtemisKioskSettingRow> settings) {}
+
+  // ✅ optional cleanup hook for UI owners
+  @override
+  void dispose() {
+    // Best-effort stop; don't await inside dispose.
+    try {
+      _hubConnection.stop();
+    } catch (_) {}
+    super.dispose();
+  }
+
+  Widget getIcons({required double size}) {
+    return Image.asset(img,width: size,height: size,package: 'artemis_acps');
+  }
 }

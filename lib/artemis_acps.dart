@@ -1,5 +1,7 @@
 import 'dart:developer';
 
+import 'package:artemis_acps/artemis_acps_reader_socket.dart';
+import 'package:artemis_acps/classes/artemis_acps_device_config_class.dart';
 import 'package:artemis_acps/classes/artemis_acps_kiosk_class.dart';
 import 'package:artemis_acps/classes/artemis_acps_workstation_class.dart';
 import 'package:artemis_acps/classes/artemis_kiosk_device_class.dart';
@@ -19,7 +21,7 @@ class ArtemisAcps {
   void Function(String error)? onError;
 
   ArtemisAcps({required String baseUrl, required String airport, required String airline, ArtemisAcpsController? controller, bool locked = false, this.buttonStyle, this.onReceivedData, this.onError}) {
-    _controller = controller ?? ArtemisAcpsController(baseUrl: baseUrl, airport: airport, airline: airline, locked: locked,onReceivedData: onReceivedData,onError: onError);
+    _controller = controller ?? ArtemisAcpsController(baseUrl: baseUrl, airport: airport, airline: airline, locked: locked, onReceivedData: onReceivedData, onError: onError);
   }
 
   Widget getSocketStatusWidget() {
@@ -46,6 +48,7 @@ class ArtemisAcps {
     Widget Function(ArtemisAcpsController controller, ArtemisAcpsWorkstation? worksation, HubConnectionState socketState)? socketWidgetBuilder,
     Widget Function(ArtemisAcpsController controller, ArtemisAcpsWorkstation? worksation, HubConnectionState socketState, ArtemisAcpsKioskStatus? kioskStatus)? kioskWidgetBuilder,
     Widget Function(ArtemisAcpsController controller, ArtemisAcpsWorkstation? worksation, HubConnectionState socketState, ArtemisAcpsKioskStatus? kioskStatus, List<ArtemisKioskDevice> devices)? generalWidgetBuilder,
+    Widget Function(ArtemisAcpsController controller, ArtemisAcpsWorkstation? worksation, HubConnectionState socketState, ArtemisAcpsKioskStatus? kioskStatus, List<AcpsAcpsReaderSocket> readers)? readersWidgetBuilder,
   }) {
     return _GeneralWidget(
       controller: _controller,
@@ -57,6 +60,98 @@ class ArtemisAcps {
       socketWidgetBuilder: socketWidgetBuilder,
       kioskWidgetBuilder: kioskWidgetBuilder,
       generalWidgetBuilder: generalWidgetBuilder,
+      readersWidgetBuilder: readersWidgetBuilder,
+    );
+  }
+
+  Widget getVirtualDevicesWidget({
+    List<String> filters = const [],
+    List<String> statusFilters = const [],
+    double size = 30,
+    Widget Function(ArtemisAcpsController controller, ArtemisAcpsWorkstation? worksation, HubConnectionState socketState, ArtemisAcpsKioskStatus? kioskStatus, List<AcpsAcpsReaderSocket> readers)? readersWidgetBuilder,
+  }) {
+    return ValueListenableBuilder<String>(
+      valueListenable: controller.station,
+      builder: (context, station, child) {
+        return ValueListenableBuilder<ArtemisAcpsWorkstation?>(
+          valueListenable: controller.workstation,
+          builder: (context, workstation, child) {
+            if (workstation == null) {
+              return SizedBox();
+            }
+            return GestureDetector(
+              onLongPress: () {
+                controller.disconnect();
+              },
+              child: ValueListenableBuilder<HubConnectionState>(
+                valueListenable: controller.socketStatus,
+                builder: (context, socket, child) {
+                  if (socket == HubConnectionState.Connected) {
+                    return Column(
+                      children: [
+                        ValueListenableBuilder<ArtemisAcpsKioskStatus?>(
+                          valueListenable: controller.kioskStatus,
+                          builder: (context, kioskStatus, child) {
+                            if (kioskStatus != null && kioskStatus.isOnline) {
+                              return Builder(
+                                builder: (BuildContext context) {
+                                  return ValueListenableBuilder<List<AcpsAcpsReaderSocket>>(
+                                    valueListenable: controller.readerDevicesNotifier,
+                                    builder: (context, readerDevices, child) {
+                                      if (readerDevices.isEmpty) return SizedBox();
+                                      if (readersWidgetBuilder != null) {
+                                        return ValueListenableBuilder<List<ArtemisKioskDevice>>(
+                                          valueListenable: controller.devices,
+                                          builder: (context, value, child) {
+                                            return readersWidgetBuilder!(controller, workstation, socket, kioskStatus, readerDevices);
+                                          },
+                                        );
+                                      }
+                                      return Container(
+                                        height: size,
+                                        padding: EdgeInsets.all(1),
+                                        decoration: BoxDecoration(border: Border.all(color: Color(0xff00cf37)), borderRadius: BorderRadius.circular(8)),
+                                        child: Stack(children: [_readerDevicesWidget(controller: controller, filters: filters, statusFilters: statusFilters, size: size - 2)]),
+                                      );
+                                    },
+                                  );
+                                },
+                              );
+                            }
+                            return Container(
+                              height: size,
+                              constraints: BoxConstraints(minWidth: 100),
+                              padding: EdgeInsets.all(1),
+                              decoration: BoxDecoration(border: Border.all(color: Colors.green), borderRadius: BorderRadius.circular(8)),
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  SizedBox(height: size, child: Text(workstation.workstationName, style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black38))),
+                                  Positioned(
+                                    bottom: 0,
+                                    right: 0,
+                                    child: Container(
+                                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(4), color: Colors.black12),
+                                      padding: EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                                      child: Text("Offline", style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, height: 1)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    );
+                  }
+
+                  return SizedBox();
+                },
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -67,8 +162,10 @@ class ArtemisAcps {
   ArtemisAcpsController get controller => _controller;
 
   ArtemisAcpsKiosk? get kiosk => _controller.kiosk.value;
-  Map<String,dynamic>? get kioskSettingMap => _controller.kioskSettingMap;
-  Map<String,dynamic>? get kioskSettingAllMap => _controller.kioskAllSettingMap;
+
+  Map<String, dynamic>? get kioskSettingMap => _controller.kioskSettingMap;
+
+  Map<String, dynamic>? get kioskSettingAllMap => _controller.kioskAllSettingMap;
 }
 
 class _SocketStatusWidget extends StatelessWidget {
@@ -181,6 +278,7 @@ class _GeneralWidget extends StatelessWidget {
   final Widget Function(ArtemisAcpsController controller, ArtemisAcpsWorkstation? worksation, HubConnectionState socketState)? socketWidgetBuilder;
   final Widget Function(ArtemisAcpsController controller, ArtemisAcpsWorkstation? worksation, HubConnectionState socketState, ArtemisAcpsKioskStatus? kioskStatus)? kioskWidgetBuilder;
   final Widget Function(ArtemisAcpsController controller, ArtemisAcpsWorkstation? worksation, HubConnectionState socketState, ArtemisAcpsKioskStatus? kioskStatus, List<ArtemisKioskDevice> devices)? generalWidgetBuilder;
+  final Widget Function(ArtemisAcpsController controller, ArtemisAcpsWorkstation? worksation, HubConnectionState socketState, ArtemisAcpsKioskStatus? kioskStatus, List<AcpsAcpsReaderSocket> readers)? readersWidgetBuilder;
 
   const _GeneralWidget({
     required this.controller,
@@ -192,6 +290,7 @@ class _GeneralWidget extends StatelessWidget {
     this.socketWidgetBuilder,
     this.kioskWidgetBuilder,
     this.generalWidgetBuilder,
+    this.readersWidgetBuilder,
   });
 
   @override
@@ -244,52 +343,86 @@ class _GeneralWidget extends StatelessWidget {
                 valueListenable: controller.socketStatus,
                 builder: (context, socket, child) {
                   if (socket == HubConnectionState.Connected) {
-                    return ValueListenableBuilder<ArtemisAcpsKioskStatus?>(
-                      valueListenable: controller.kioskStatus,
-                      builder: (context, kioskStatus, child) {
-                        if (kioskStatus != null && kioskStatus.isOnline) {
-
-                          if (generalWidgetBuilder != null) {
-                            return ValueListenableBuilder<List<ArtemisKioskDevice>>(
-                              valueListenable: controller.devices,
-                              builder: (context, value, child) {
-                                return generalWidgetBuilder!(controller, workstation, socket, kioskStatus, value);
-                              },
-                            );
-                            // return generalWidgetBuilder!(controller, workstation, socket, kioskStatus, controller.devices.value);
-                          }
-                          return Container(
-                            height: size,
-                            padding: EdgeInsets.all(1),
-                            decoration: BoxDecoration(border: Border.all(color: Color(0xff00cf37)), borderRadius: BorderRadius.circular(8)),
-                            child: Stack(children: [_KioskDevicesWidget(controller: controller, filters: filters, statusFilters: statusFilters, size: size - 2)]),
-                          );
-                        }
-                        if (kioskWidgetBuilder != null) {
-                          return kioskWidgetBuilder!(controller, workstation, socket, kioskStatus);
-                        }
-                        return Container(
-                          height: size,
-                          constraints: BoxConstraints(minWidth: 100),
-                          padding: EdgeInsets.all(1),
-                          decoration: BoxDecoration(border: Border.all(color: Colors.green), borderRadius: BorderRadius.circular(8)),
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              SizedBox(height: size, child: Text(workstation.workstationName, style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black38))),
-                              Positioned(
-                                bottom: 0,
-                                right: 0,
-                                child: Container(
-                                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(4), color: Colors.black12),
-                                  padding: EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-                                  child: Text("Offline", style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, height: 1)),
-                                ),
+                    return Column(
+                      children: [
+                        ValueListenableBuilder<ArtemisAcpsKioskStatus?>(
+                          valueListenable: controller.kioskStatus,
+                          builder: (context, kioskStatus, child) {
+                            if (kioskStatus != null && kioskStatus.isOnline) {
+                              return Column(
+                                children: [
+                                  Builder(
+                                    builder: (BuildContext context) {
+                                      if (generalWidgetBuilder != null) {
+                                        return ValueListenableBuilder<List<ArtemisKioskDevice>>(
+                                          valueListenable: controller.devices,
+                                          builder: (context, value, child) {
+                                            return generalWidgetBuilder!(controller, workstation, socket, kioskStatus, value);
+                                          },
+                                        );
+                                        // return generalWidgetBuilder!(controller, workstation, socket, kioskStatus, controller.devices.value);
+                                      }
+                                      return Container(
+                                        height: size,
+                                        padding: EdgeInsets.all(1),
+                                        decoration: BoxDecoration(border: Border.all(color: Color(0xff00cf37)), borderRadius: BorderRadius.circular(8)),
+                                        child: Stack(children: [_KioskDevicesWidget(controller: controller, filters: filters, statusFilters: statusFilters, size: size - 2)]),
+                                      );
+                                    },
+                                  ),
+                                  // Builder(builder: (BuildContext context) {
+                                  //   return ValueListenableBuilder<List<AcpsAcpsReaderSocket>>(
+                                  //     valueListenable: controller.readerDevicesNotifier,
+                                  //     builder: (context, readerDevices, child) {
+                                  //       if(readerDevices.isEmpty ) return SizedBox();
+                                  //       if (readersWidgetBuilder != null) {
+                                  //         return ValueListenableBuilder<List<ArtemisKioskDevice>>(
+                                  //
+                                  //           valueListenable: controller.devices,
+                                  //           builder: (context, value, child) {
+                                  //             return readersWidgetBuilder!(controller, workstation, socket, kioskStatus, readerDevices);
+                                  //           },
+                                  //         );
+                                  //       }
+                                  //       return Container(
+                                  //         height: size,
+                                  //         padding: EdgeInsets.all(1),
+                                  //         decoration: BoxDecoration(border: Border.all(color: Color(0xff00cf37)), borderRadius: BorderRadius.circular(8)),
+                                  //         child: Stack(children: [_readerDevicesWidget(controller: controller, filters: filters, statusFilters: statusFilters, size: size - 2)]),
+                                  //       );
+                                  //     },
+                                  //   );
+                                  // })
+                                ],
+                              );
+                            }
+                            if (kioskWidgetBuilder != null) {
+                              return kioskWidgetBuilder!(controller, workstation, socket, kioskStatus);
+                            }
+                            return Container(
+                              height: size,
+                              constraints: BoxConstraints(minWidth: 100),
+                              padding: EdgeInsets.all(1),
+                              decoration: BoxDecoration(border: Border.all(color: Colors.green), borderRadius: BorderRadius.circular(8)),
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  SizedBox(height: size, child: Text(workstation.workstationName, style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black38))),
+                                  Positioned(
+                                    bottom: 0,
+                                    right: 0,
+                                    child: Container(
+                                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(4), color: Colors.black12),
+                                      padding: EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                                      child: Text("Offline", style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, height: 1)),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                        );
-                      },
+                            );
+                          },
+                        ),
+                      ],
                     );
                   }
                   if (socketWidgetBuilder != null) {
@@ -325,6 +458,35 @@ class _GeneralWidget extends StatelessWidget {
               ),
             );
           },
+        );
+      },
+    );
+  }
+}
+
+class _readerDevicesWidget extends StatelessWidget {
+  final List<String> filters;
+  final List<String> statusFilters;
+  final double size;
+  final ArtemisAcpsController controller;
+
+  const _readerDevicesWidget({required this.controller, required this.filters, required this.statusFilters, required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<List<AcpsAcpsReaderSocket>>(
+      valueListenable: controller.readerDevicesNotifier,
+      builder: (context, value, child) {
+        if (value.isEmpty) return SizedBox();
+        return Row(
+          spacing: 1,
+          mainAxisSize: MainAxisSize.min,
+          children:
+              value
+                  .where((b) => statusFilters.isEmpty || statusFilters.contains(b.status))
+                  .where((a) => filters.isEmpty || filters.map((f) => f.toLowerCase()).contains(a.readerType.typeName.toLowerCase()))
+                  .map((a) => Image.asset(a.img, width: size, package: 'artemis_acps'))
+                  .toList(),
         );
       },
     );
